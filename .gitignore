@@ -1,0 +1,12 @@
+build/
+cmake-build-*/
+
+# Visual Studio and CLion extras
+.vs/
+.idea/
+
+# CMake build files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
