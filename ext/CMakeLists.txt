@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.22)
 add_subdirectory(glfw)
 add_subdirectory(vma)
 add_subdirectory(glm)
+add_subdirectory(plog)
 
 # Dear ImGUI
 set(GUI_SRCS

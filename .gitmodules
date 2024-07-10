@@ -10,3 +10,6 @@
 [submodule "ext/gui"]
 	path = ext/gui
 	url = https://github.com/ocornut/imgui.git
+[submodule "ext/plog"]
+	path = ext/plog
+	url = https://github.com/SergiusTheBest/plog.git

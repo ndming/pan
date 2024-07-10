@@ -4,6 +4,7 @@ set(TARGET engine)
 
 set(SRCS
         src/Engine.cpp
+        src/InstanceBuilder.cpp
 )
 
 # Build a library
@@ -21,3 +22,4 @@ target_link_libraries(${TARGET} PRIVATE GPUOpen::VulkanMemoryAllocator)
 target_link_libraries(${TARGET} PRIVATE glfw)
 target_link_libraries(${TARGET} PRIVATE glm::glm)
 target_link_libraries(${TARGET} PRIVATE gui)
+target_link_libraries(${TARGET} PRIVATE plog::plog)
