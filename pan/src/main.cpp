@@ -1,14 +1,29 @@
-#include <iostream>
+#include <plog/Init.h>
+#include <plog/Appenders/ColorConsoleAppender.h>
+#include <plog/Formatters/TxtFormatter.h>
 
-#include <vector>
-#include <string_view>
+#include <engine/Engine.h>
 
-void print(const std::vector<std::string_view>& layers) {
-    for (const auto layer : layers) {
-        std::cout << layer << '\n';
-    }
-}
 
 int main(int argc, char* argv[]) {
-    print({ "Hello", "pan" });
+    // Plant a logger
+    auto appender = plog::ColorConsoleAppender<plog::TxtFormatter>();
+    init(plog::verbose, &appender);
+
+    // Create a window
+    glfwInit(); glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    const auto window = glfwCreateWindow(1280, 768, "pan", nullptr, nullptr);
+
+    // Create an engine and bind to the window
+    const auto engine = Engine::create();
+    engine->bindSurface(window);
+
+    // Destroy all resources
+    engine->destroy();
+
+    // Destroy the window
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    return 0;
 }
