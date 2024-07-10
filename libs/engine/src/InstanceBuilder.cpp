@@ -37,7 +37,7 @@ vk::Instance InstanceBuilder::build(const vk::InstanceCreateFlags flags) const {
     const auto toName = [](const auto& property) { return property.layerName.data(); };
     const auto supportedLayers = properties | views::transform(toName) | to<std::unordered_set<std::string>>();
 
-    constexpr auto validationLayers = std::array{
+    static constexpr auto validationLayers = std::array{
         "VK_LAYER_KHRONOS_validation",
     };
     if (const auto supported = [&supportedLayers](const auto& it) { return supportedLayers.contains(it); };

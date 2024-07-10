@@ -5,12 +5,14 @@
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
+#include "Utility.h"
+
 
 class Engine {
 public:
     static std::unique_ptr<Engine> create();
 
-    void bindSurface(GLFWwindow* window);
+    void bindSurface(GLFWwindow* window, const BindOptions& options = BindOptions{});
 
     void destroy() const;
 

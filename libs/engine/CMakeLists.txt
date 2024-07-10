@@ -6,6 +6,7 @@ set(SRCS
         src/DebugMessenger.cpp
         src/Engine.cpp
         src/InstanceBuilder.cpp
+        src/PhysicalDeviceSelector.cpp
         src/external/vma.cpp
 )
 

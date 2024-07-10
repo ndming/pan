@@ -13,7 +13,7 @@ Engine::Engine() {
     _instance = InstanceBuilder()
         .applicationName("pan")
         .applicationVersion(1, 0, 0)
-        .apiVersion(1, 3, 0)
+        .apiVersion(1, 0, 0)
         .build();
 
 #ifndef NDEBUG
@@ -22,7 +22,7 @@ Engine::Engine() {
 
 }
 
-void Engine::bindSurface(GLFWwindow* const window) {
+void Engine::bindSurface(GLFWwindow* const window, const BindOptions& options) {
     // Register a framebuffer callback
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
@@ -32,6 +32,8 @@ void Engine::bindSurface(GLFWwindow* const window) {
         _instance, window, nullptr, reinterpret_cast<VkSurfaceKHR*>(&_surface))) != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to create window surface!");
     }
+
+    // TODO: Pick physical device, logical device, and instantiate an allocator
 }
 
 void Engine::framebufferResizeCallback(GLFWwindow* window, [[maybe_unused]] const int w, [[maybe_unused]] const int h) {
