@@ -14,9 +14,9 @@ int main(int argc, char* argv[]) {
     glfwInit(); glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     const auto window = glfwCreateWindow(1280, 768, "pan", nullptr, nullptr);
 
-    // Create an engine and bind to the window
+    // Create an engine
     const auto engine = Engine::create();
-    engine->bindSurface(window);
+    engine->bindSurface(window, {}, true);
 
     // Destroy all resources
     engine->destroy();

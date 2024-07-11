@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.22)
 
 # Dependencies with CMake support
 add_subdirectory(glfw)
-add_subdirectory(vma)
 add_subdirectory(glm)
 add_subdirectory(plog)
 
@@ -19,6 +18,8 @@ set(GUI_SRCS
 )
 add_library(gui STATIC ${GUI_SRCS})
 target_include_directories(gui PUBLIC gui)
-target_include_directories(gui PRIVATE ${Vulkan_INCLUDE_DIRS})  # required by MSVC
+if (MSVC)
+    target_include_directories(gui PRIVATE ${Vulkan_INCLUDE_DIRS})
+endif ()
 target_link_libraries(gui PRIVATE ${Vulkan_LIBRARIES})
 target_link_libraries(gui PRIVATE glfw)
