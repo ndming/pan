@@ -11,6 +11,7 @@ set(INTERNAL_SRCS
         src/bootstrap/InstanceBuilder.cpp
         src/bootstrap/PhysicalDeviceSelector.cpp
         src/bootstrap/QueueFamilyFinder.cpp
+        src/bootstrap/Translator.cpp
         src/external/VmaUsage.cpp
 )
 

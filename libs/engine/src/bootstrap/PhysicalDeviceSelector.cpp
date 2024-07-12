@@ -10,18 +10,8 @@ PhysicalDeviceSelector& PhysicalDeviceSelector::extensions(const std::vector<con
     return *this;
 }
 
-PhysicalDeviceSelector& PhysicalDeviceSelector::features11(const vk::PhysicalDeviceVulkan11Features &features) {
-    _features11 = features;
-    return *this;
-}
-
-PhysicalDeviceSelector& PhysicalDeviceSelector::features12(const vk::PhysicalDeviceVulkan12Features &features) {
-    _features12 = features;
-    return *this;
-}
-
-PhysicalDeviceSelector& PhysicalDeviceSelector::features13(const vk::PhysicalDeviceVulkan13Features &features) {
-    _features13 = features;
+PhysicalDeviceSelector & PhysicalDeviceSelector::features(const vk::PhysicalDeviceFeatures &features) {
+    _features = features;
     return *this;
 }
 
@@ -56,7 +46,17 @@ bool PhysicalDeviceSelector::checkExtensionSupport(const vk::PhysicalDevice& dev
     return std::ranges::all_of(_requiredExtensions, std::identity{}, available);
 }
 
-bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice &device) const {
-    // TODO: implement check feature support
+bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice& device) const {
+    const auto supportedFeatures = device.getFeatures();
+
+    const auto requestedFeaturesArray = reinterpret_cast<const vk::Bool32*>(&_features);
+    const auto supportedFeaturesArray = reinterpret_cast<const vk::Bool32*>(&supportedFeatures);
+    constexpr auto featureCount = sizeof(vk::PhysicalDeviceFeatures) / sizeof(vk::Bool32);
+
+    for (size_t i = 0; i < featureCount; ++i) {
+        if (requestedFeaturesArray[i] && !supportedFeaturesArray[i]) {
+            return false;
+        }
+    }
     return true;
 }

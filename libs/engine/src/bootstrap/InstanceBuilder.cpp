@@ -1,11 +1,13 @@
-#include <array>
-#include <functional>
-#include <ranges>
-#include <unordered_set>
-
 #include <GLFW/glfw3.h>
 
+#ifndef NDEBUG
+#include <functional>
+#include <unordered_set>
+#include <ranges>
+
 #include "DebugMessenger.h"
+#endif
+
 #include "InstanceBuilder.h"
 
 
@@ -24,7 +26,12 @@ InstanceBuilder& InstanceBuilder::apiVersion(const int major, const int minor, c
     return *this;
 }
 
-vk::Instance InstanceBuilder::build(const vk::InstanceCreateFlags flags) const {
+InstanceBuilder & InstanceBuilder::layers(const char* const* layers, const std::size_t count) {
+    _layers = std::vector(layers, layers + count);
+    return *this;
+}
+
+vk::Instance InstanceBuilder::build() const {
     // Application info
     const auto appInfo = vk::ApplicationInfo{
         _applicationName.data(), _applicationVersion, "None", _apiVersion, _apiVersion };
@@ -37,19 +44,14 @@ vk::Instance InstanceBuilder::build(const vk::InstanceCreateFlags flags) const {
     const auto toName = [](const auto& property) { return property.layerName.data(); };
     const auto supportedLayers = properties | views::transform(toName) | to<std::unordered_set<std::string>>();
 
-    static constexpr auto validationLayers = std::array{
-        "VK_LAYER_KHRONOS_validation",
-    };
     if (const auto supported = [&supportedLayers](const auto& it) { return supportedLayers.contains(it); };
-        any_of(validationLayers, std::logical_not{}, supported)) {
+        any_of(_layers, std::logical_not{}, supported)) {
         throw std::runtime_error("Validation layers requested, but not available!");
     }
 #endif
 
     // Instance create info
     auto createInfo = vk::InstanceCreateInfo{};
-    createInfo.sType = vk::StructureType::eInstanceCreateInfo;
-    createInfo.flags = flags;
     createInfo.pApplicationInfo = &appInfo;
 
     // Required extensions
@@ -70,8 +72,8 @@ vk::Instance InstanceBuilder::build(const vk::InstanceCreateFlags flags) const {
     createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
 #ifndef NDEBUG
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-    createInfo.ppEnabledLayerNames = validationLayers.data();
+    createInfo.enabledLayerCount = static_cast<uint32_t>(_layers.size());
+    createInfo.ppEnabledLayerNames = _layers.data();
 
     using MessageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT;
     using MessageType = vk::DebugUtilsMessageTypeFlagBitsEXT;

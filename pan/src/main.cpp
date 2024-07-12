@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
 
     // Create an engine
     const auto engine = Engine::create();
-    engine->bindSurface(window, {}, true);
+    engine->bindSurface(window);
 
     // Destroy all resources
     engine->destroy();
