@@ -2,6 +2,8 @@
 #include <ranges>
 #include <set>
 
+#include <vulkan/vulkan.hpp>
+#include <GLFW/glfw3.h>
 #include <plog/Log.h>
 
 #include "bootstrap/DebugMessenger.h"
@@ -49,8 +51,16 @@ Engine::Engine() {
 #endif
 }
 
-void Engine::bindSurface(GLFWwindow* const window, const std::vector<DeviceFeature>& features, const bool asyncCompute) {
+void Engine::destroy() const {
+#ifndef NDEBUG
+    DebugMessenger::destroy(_instance, _debugMessenger);
+#endif
+    _instance.destroy(nullptr);
+}
+
+void Engine::attachSurface(void* const nativeWindow, const std::vector<DeviceFeature>& features) {
     // Register a framebuffer callback
+    const auto window = static_cast<GLFWwindow*>(nativeWindow);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
@@ -62,7 +72,7 @@ void Engine::bindSurface(GLFWwindow* const window, const std::vector<DeviceFeatu
 
     // Find a suitable GPU and create a logical device and an allocator
     const auto deviceFeatures = Translator::toPhysicalDeviceFeatures(features);
-    pickPhysicalDevice(deviceFeatures, asyncCompute);
+    pickPhysicalDevice(deviceFeatures);
     createLogicalDevice(deviceFeatures);
     createAllocator();
 }
@@ -72,7 +82,7 @@ void Engine::framebufferResizeCallback(GLFWwindow* window, [[maybe_unused]] cons
     engine->_framebufferResized = true;
 }
 
-void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features, const bool asyncCompute) {
+void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features) {
     // Find a list of possible candidate devices based on requested features
     const auto candidates = PhysicalDeviceSelector()
         .extensions(std::vector(pDeviceExtensions.begin(), pDeviceExtensions.end()))
@@ -81,10 +91,11 @@ void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features, cons
 
     auto finder = QueueFamilyFinder()
         .requestPresentFamily(_surface)
-        .requestComputeFamily(asyncCompute);
+        .requestComputeFamily(true);
 
     // Pick a physical device based on supported queue faimlies
-    auto fallbackCandidate = vk::PhysicalDevice{};  // in case we couldn't find a device supporting async compute
+    // Set out a fallback device in case we couldn't find a device supporting async compute
+    auto fallbackCandidate = vk::PhysicalDevice{};
     for (const auto& candidate : candidates) {
         if (finder.find(candidate)) {
             _physicalDevice = candidate;
@@ -98,12 +109,11 @@ void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features, cons
     if (_physicalDevice) {
         _graphicsFamily = finder.getGraphicsFamily();
         _presentFamily = finder.getPresentFamily();
-        if (asyncCompute) {
-            _computeFamily = finder.getComputeFamily();
-        }
+        _computeFamily = finder.getComputeFamily();
 
         const auto properties = _physicalDevice.getProperties();
         PLOG_INFO << "Found a suitable device: " << properties.deviceName.data();
+        PLOG_INFO << "Detected async compute capability";
     } else if (fallbackCandidate) {
         _physicalDevice = fallbackCandidate;
         // Find queue families again since we didn't break out early when we set fallback candidate
@@ -112,9 +122,9 @@ void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features, cons
         _presentFamily = finder.getPresentFamily();
 
         const auto properties = _physicalDevice.getProperties();
-        PLOG_INFO << "Could not find a device supporting async compute, falling back to: " << properties.deviceName.data();
+        PLOG_INFO << "Found a suitable device: " << properties.deviceName.data();
     } else {
-        PLOG_ERROR << "Could not find a suitable GPU. Try requesting less features or updating your driver.";
+        PLOG_ERROR << "Could not find a suitable GPU: try requesting less features or updating your driver";
         throw std::runtime_error("Could not find a suitable GPU!");
     }
 }
@@ -170,12 +180,21 @@ void Engine::createAllocator() const {
     vmaCreateAllocator(&allocatorCreateInfo, &pAllocator);
 }
 
-void Engine::destroy() const {
+void Engine::detachSurface() const {
     vmaDestroyAllocator(pAllocator);
     _device.destroy(nullptr);
     _instance.destroySurfaceKHR(_surface);
-#ifndef NDEBUG
-    DebugMessenger::destroy(_instance, _debugMessenger);
-#endif
-    _instance.destroy(nullptr);
+}
+
+std::unique_ptr<SwapChain> Engine::createSwapChain(void* const nativeWindow) const {
+    const auto capabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+    const auto formats = _physicalDevice.getSurfaceFormatsKHR(_surface);
+    const auto presentModes = _physicalDevice.getSurfacePresentModesKHR(_surface);
+
+    const auto swapChain = new SwapChain{ capabilities, formats, presentModes, nativeWindow };
+    return std::unique_ptr<SwapChain>(swapChain);
+}
+
+void Engine::destroySwapChain(std::unique_ptr<SwapChain> swapChain) {
+
 }

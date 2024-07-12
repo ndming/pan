@@ -6,18 +6,23 @@
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
-#include <GLFW/glfw3.h>
 
 #include "engine/DeviceFeature.h"
+#include "engine/SwapChain.h"
 
+
+struct GLFWwindow;
 
 class Engine {
 public:
     static std::unique_ptr<Engine> create();
-
-    void bindSurface(GLFWwindow* window, const std::vector<DeviceFeature>& features = {}, bool asyncCompute = false);
-
     void destroy() const;
+
+    void attachSurface(void* nativeWindow, const std::vector<DeviceFeature>& features = {});
+    void detachSurface() const;
+
+    [[nodiscard]] std::unique_ptr<SwapChain> createSwapChain(void* nativeWindow) const;
+    void destroySwapChain(std::unique_ptr<SwapChain> swapChain);
 
 private:
     Engine();
@@ -37,7 +42,7 @@ private:
     std::optional<uint32_t> _graphicsFamily{};
     std::optional<uint32_t> _presentFamily{};
     std::optional<uint32_t> _computeFamily{};
-    void pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features, bool asyncCompute);
+    void pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features);
 
     vk::Device _device{};
     vk::Queue _graphicsQueue{};

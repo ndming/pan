@@ -16,10 +16,9 @@ set(GUI_SRCS
         gui/backends/imgui_impl_glfw.cpp
         gui/misc/cpp/imgui_stdlib.cpp
 )
-add_library(gui STATIC ${GUI_SRCS})
+add_library(gui STATIC)
+target_sources(gui PRIVATE ${GUI_SRCS})
 target_include_directories(gui PUBLIC gui)
-if (MSVC)
-    target_include_directories(gui PRIVATE ${Vulkan_INCLUDE_DIRS})
-endif ()
+target_include_directories(gui PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(gui PRIVATE ${Vulkan_LIBRARIES})
 target_link_libraries(gui PRIVATE glfw)
