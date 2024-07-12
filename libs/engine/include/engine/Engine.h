@@ -44,4 +44,5 @@ private:
     vk::Queue _presentQueue{};
     vk::Queue _computeQueue{};
     void createLogicalDevice(const vk::PhysicalDeviceFeatures& features);
+    void createAllocator() const;
 };

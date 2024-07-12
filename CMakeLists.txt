@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 project(pan
     VERSION 1.0.0
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 set(CMAKE_CXX_STANDARD 23)

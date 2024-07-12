@@ -3,5 +3,5 @@
 
 enum class DeviceFeature {
     SamplerAnisotropy,
-    SampleRateSahding,
+    SampleRateShading,
 };

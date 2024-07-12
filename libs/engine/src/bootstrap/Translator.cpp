@@ -8,7 +8,7 @@ vk::PhysicalDeviceFeatures Translator::toPhysicalDeviceFeatures(const std::vecto
         switch (feature) {
             case DeviceFeature::SamplerAnisotropy:
                 deviceFeatures.samplerAnisotropy = vk::True;
-            case DeviceFeature::SampleRateSahding:
+            case DeviceFeature::SampleRateShading:
                 deviceFeatures.sampleRateShading = vk::True;
         }
     }

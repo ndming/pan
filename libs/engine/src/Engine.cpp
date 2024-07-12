@@ -22,8 +22,9 @@ static constexpr std::array pValidationLayers{
 #endif
 
 static constexpr std::array pDeviceExtensions{
-    vk::KHRSwapchainExtensionName,     // to present to a surface
-    vk::EXTMemoryBudgetExtensionName,  // to enhance the behavior of our allocator
+    vk::KHRSwapchainExtensionName,         // to present to a surface
+    vk::EXTMemoryBudgetExtensionName,      // to make our allocator estimate memory budget more accurately
+    vk::EXTMemoryPriorityExtensionName,    // incorporate memory priority to the allocator
 };
 
 // We don't make the allocator a memeber of Engine because doing so would require the vma library to be public
@@ -37,7 +38,7 @@ Engine::Engine() {
     _instance = InstanceBuilder()
         .applicationName("pan")
         .applicationVersion(1, 0, 0)
-        .apiVersion(1, 1, 0)
+        .apiVersion(1, 2, 0)
 #ifndef NDEBUG
         .layers(pValidationLayers.data(), pValidationLayers.size())
 #endif
@@ -59,25 +60,11 @@ void Engine::bindSurface(GLFWwindow* const window, const std::vector<DeviceFeatu
         throw std::runtime_error("Failed to create window surface!");
     }
 
-    // Find a suitable GPU and create a logical device
+    // Find a suitable GPU and create a logical device and an allocator
     const auto deviceFeatures = Translator::toPhysicalDeviceFeatures(features);
     pickPhysicalDevice(deviceFeatures, asyncCompute);
     createLogicalDevice(deviceFeatures);
-
-    // Create an allocator
-    VmaVulkanFunctions vulkanFunctions = {};
-    vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
-    vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
-
-    VmaAllocatorCreateInfo allocatorCreateInfo = {};
-    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
-    allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_1;
-    allocatorCreateInfo.physicalDevice = _physicalDevice;
-    allocatorCreateInfo.device = _device;
-    allocatorCreateInfo.instance = _instance;
-    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-
-    vmaCreateAllocator(&allocatorCreateInfo, &pAllocator);
+    createAllocator();
 }
 
 void Engine::framebufferResizeCallback(GLFWwindow* window, [[maybe_unused]] const int w, [[maybe_unused]] const int h) {
@@ -165,6 +152,22 @@ void Engine::createLogicalDevice(const vk::PhysicalDeviceFeatures& features) {
     if (_computeFamily.has_value()) {
         _computeQueue = _device.getQueue(_computeFamily.value(), 0);
     }
+}
+
+void Engine::createAllocator() const {
+    VmaVulkanFunctions vulkanFunctions = {};
+    vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
+    vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
+
+    VmaAllocatorCreateInfo allocatorCreateInfo = {};
+    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT;
+    allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+    allocatorCreateInfo.physicalDevice = _physicalDevice;
+    allocatorCreateInfo.device = _device;
+    allocatorCreateInfo.instance = _instance;
+    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+
+    vmaCreateAllocator(&allocatorCreateInfo, &pAllocator);
 }
 
 void Engine::destroy() const {
