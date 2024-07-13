@@ -19,6 +19,7 @@ set(GUI_SRCS
 add_library(gui STATIC)
 target_sources(gui PRIVATE ${GUI_SRCS})
 target_include_directories(gui PUBLIC gui)
+target_include_directories(gui PUBLIC gui/backends)
 target_include_directories(gui PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(gui PRIVATE ${Vulkan_LIBRARIES})
 target_link_libraries(gui PRIVATE glfw)

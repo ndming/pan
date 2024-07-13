@@ -36,7 +36,7 @@ vk::Result DebugMessenger::createDebugUtilsMessengerEXT(
     return vk::Result::eErrorExtensionNotPresent;
 }
 
-void DebugMessenger::destroy(const vk::Instance &instance, const vk::DebugUtilsMessengerEXT &messenger) {
+void DebugMessenger::destroy(const vk::Instance &instance, const vk::DebugUtilsMessengerEXT &messenger) noexcept {
     destroyDebugUtilsMessengerEXT(instance, messenger);
 }
 

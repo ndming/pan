@@ -6,30 +6,32 @@
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
+#include <GLFW/glfw3.h>
 
 #include "engine/DeviceFeature.h"
 #include "engine/SwapChain.h"
 
 
-struct GLFWwindow;
-
 class Engine {
 public:
     static std::unique_ptr<Engine> create();
-    void destroy() const;
+    void destroy() const noexcept;
 
-    void attachSurface(void* nativeWindow, const std::vector<DeviceFeature>& features = {});
-    void detachSurface() const;
+    void attachSurface(GLFWwindow* window, const std::vector<DeviceFeature>& features = {});
+    void detachSurface() const noexcept;
 
-    [[nodiscard]] std::unique_ptr<SwapChain> createSwapChain(void* nativeWindow) const;
-    void destroySwapChain(std::unique_ptr<SwapChain> swapChain);
+    [[nodiscard]] std::unique_ptr<SwapChain> createSwapChain(GLFWwindow* window) const;
+    void destroySwapChain(std::unique_ptr<SwapChain>&& swapChain) const noexcept;
+
+    Engine(const Engine&) = delete;
+    Engine& operator=(const Engine&) = delete;
 
 private:
     Engine();
 
     vk::Instance _instance{};
 
-#ifndef NDEBUG
+#ifdef NDEBUG
     vk::DebugUtilsMessengerEXT _debugMessenger{};
 #endif
 
@@ -50,4 +52,7 @@ private:
     vk::Queue _computeQueue{};
     void createLogicalDevice(const vk::PhysicalDeviceFeatures& features);
     void createAllocator() const;
+
+    SwapChain* initializeSwapChain(GLFWwindow* window) const;
+    void createSwapChainImageViews(SwapChain* swapChain) const;
 };

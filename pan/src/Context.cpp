@@ -1,6 +1,9 @@
-#include <GLFW/glfw3.h>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
+#include <plog/Log.h>
 
-#include "engine/Context.h"
+#include "Context.h"
 
 
 std::unique_ptr<Context> Context::create(const std::string_view name, const int width, const int height) {
@@ -9,14 +12,14 @@ std::unique_ptr<Context> Context::create(const std::string_view name, const int 
 
 Context::Context(const std::string_view name, const int width, const int height) {
     glfwInit(); glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    _nativeWindow = glfwCreateWindow(width, height, name.data(), nullptr, nullptr);
+    _window = glfwCreateWindow(width, height, name.data(), nullptr, nullptr);
 }
 
-void Context::destroy() const {
-    glfwDestroyWindow(_nativeWindow);
+void Context::destroy() const noexcept {
+    glfwDestroyWindow(_window);
     glfwTerminate();
 }
 
-void* Context::getNativeWindow() const {
-    return _nativeWindow;
+GLFWwindow* Context::getNativeWindow() const {
+    return _window;
 }

@@ -7,7 +7,7 @@ class DebugMessenger {
 public:
     [[nodiscard]] static vk::DebugUtilsMessengerEXT create(const vk::Instance& instance);
 
-    static void destroy(const vk::Instance& instance, const vk::DebugUtilsMessengerEXT& messenger);
+    static void destroy(const vk::Instance& instance, const vk::DebugUtilsMessengerEXT& messenger) noexcept;
 
     static VKAPI_ATTR vk::Bool32 VKAPI_CALL callback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

@@ -2,8 +2,6 @@
 #include <ranges>
 #include <set>
 
-#include <vulkan/vulkan.hpp>
-#include <GLFW/glfw3.h>
 #include <plog/Log.h>
 
 #include "bootstrap/DebugMessenger.h"
@@ -17,7 +15,7 @@
 #include "engine/Engine.h"
 
 
-#ifndef NDEBUG
+#ifdef NDEBUG
 static constexpr std::array pValidationLayers{
     "VK_LAYER_KHRONOS_validation",
 };
@@ -41,33 +39,37 @@ Engine::Engine() {
         .applicationName("pan")
         .applicationVersion(1, 0, 0)
         .apiVersion(1, 2, 0)
-#ifndef NDEBUG
+#ifdef NDEBUG
         .layers(pValidationLayers.data(), pValidationLayers.size())
 #endif
         .build();
 
-#ifndef NDEBUG
+#ifdef NDEBUG
     _debugMessenger = DebugMessenger::create(_instance);
 #endif
 }
 
-void Engine::destroy() const {
-#ifndef NDEBUG
+void Engine::destroy() const noexcept {
+#ifdef NDEBUG
     DebugMessenger::destroy(_instance, _debugMessenger);
 #endif
     _instance.destroy(nullptr);
 }
 
-void Engine::attachSurface(void* const nativeWindow, const std::vector<DeviceFeature>& features) {
+void Engine::attachSurface(GLFWwindow* const window, const std::vector<DeviceFeature>& features) {
+    if (_surface) {
+        PLOG_ERROR << "Cannot attach a new surface onto an existing one, call Engine::detachSurface first";
+        throw std::runtime_error("Failed to attach a surface: a surface is already existed");
+    }
+
     // Register a framebuffer callback
-    const auto window = static_cast<GLFWwindow*>(nativeWindow);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
     // Create a surface
     if (static_cast<vk::Result>(glfwCreateWindowSurface(
         _instance, window, nullptr, reinterpret_cast<VkSurfaceKHR*>(&_surface))) != vk::Result::eSuccess) {
-        throw std::runtime_error("Failed to create window surface!");
+        throw std::runtime_error("Failed to create a window surface!");
     }
 
     // Find a suitable GPU and create a logical device and an allocator
@@ -125,7 +127,7 @@ void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features) {
         PLOG_INFO << "Found a suitable device: " << properties.deviceName.data();
     } else {
         PLOG_ERROR << "Could not find a suitable GPU: try requesting less features or updating your driver";
-        throw std::runtime_error("Could not find a suitable GPU!");
+        throw std::runtime_error("Failed to find a suitable GPU!");
     }
 }
 
@@ -149,7 +151,7 @@ void Engine::createLogicalDevice(const vk::PhysicalDeviceFeatures& features) {
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(pDeviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = pDeviceExtensions.data();
 
-#ifndef NDEBUG
+#ifdef NDEBUG
     deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(pValidationLayers.size());
     deviceCreateInfo.ppEnabledLayerNames = pValidationLayers.data();
 #else
@@ -180,21 +182,91 @@ void Engine::createAllocator() const {
     vmaCreateAllocator(&allocatorCreateInfo, &pAllocator);
 }
 
-void Engine::detachSurface() const {
+void Engine::detachSurface() const noexcept {
+    if (!_surface) {
+        PLOG_WARNING << "Cannot detach a surface without having attached any, call Engine::attachSurface first";
+        return;
+    }
     vmaDestroyAllocator(pAllocator);
     _device.destroy(nullptr);
     _instance.destroySurfaceKHR(_surface);
 }
 
-std::unique_ptr<SwapChain> Engine::createSwapChain(void* const nativeWindow) const {
+std::unique_ptr<SwapChain> Engine::createSwapChain(GLFWwindow* const window) const {
+    if (!_surface) {
+        PLOG_ERROR << "Cannot create a swap chain without having attached a surface, use Engine::attachSurface first";
+        throw std::runtime_error("Failed to create a swap chain: surface is not initialized");
+    }
+
+    const auto swapChain = initializeSwapChain(window);
+    createSwapChainImageViews(swapChain);
+
+    return std::unique_ptr<SwapChain>(swapChain);
+}
+
+SwapChain * Engine::initializeSwapChain(GLFWwindow* const window) const {
     const auto capabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
     const auto formats = _physicalDevice.getSurfaceFormatsKHR(_surface);
     const auto presentModes = _physicalDevice.getSurfacePresentModesKHR(_surface);
 
-    const auto swapChain = new SwapChain{ capabilities, formats, presentModes, nativeWindow };
-    return std::unique_ptr<SwapChain>(swapChain);
+    const auto surfaceFormat = SwapChain::chooseSwapSurfaceFormat(formats);
+    const auto presentMode = SwapChain::chooseSwapPresentMode(presentModes);
+    const auto extent = SwapChain::chooseSwapExtent(capabilities, window);
+
+    auto minImageCount = capabilities.minImageCount + 1;
+    if (capabilities.maxImageCount > 0 && minImageCount > capabilities.maxImageCount) {
+        minImageCount = capabilities.maxImageCount;
+    }
+
+    auto createInfo = vk::SwapchainCreateInfoKHR{};
+    createInfo.surface = _surface;
+    createInfo.minImageCount = minImageCount;
+    createInfo.imageFormat = surfaceFormat.format;
+    createInfo.imageColorSpace = surfaceFormat.colorSpace;
+    createInfo.imageExtent = extent;
+    createInfo.presentMode = presentMode;
+    createInfo.imageArrayLayers = 1;
+    createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+    if (_graphicsFamily.value() != _presentFamily.value()) {
+        const uint32_t queueFamilyIndices[]{ _graphicsFamily.value(), _presentFamily.value() };
+        createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
+        createInfo.queueFamilyIndexCount = 2;
+        createInfo.pQueueFamilyIndices = queueFamilyIndices;
+    } else {
+        createInfo.imageSharingMode = vk::SharingMode::eExclusive;
+        createInfo.queueFamilyIndexCount = 0;
+        createInfo.pQueueFamilyIndices = nullptr;
+    }
+    createInfo.preTransform = capabilities.currentTransform;
+    createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+    createInfo.clipped = vk::True;
+    createInfo.oldSwapchain = nullptr;
+
+    const auto swapChain = new SwapChain{};
+    swapChain->_swapChain = _device.createSwapchainKHR(createInfo);
+    swapChain->_swapChainImages = _device.getSwapchainImagesKHR(swapChain->_swapChain);
+    swapChain->_swapChainImageFormat = surfaceFormat.format;
+    swapChain->_swapChainImageExtent = extent;
+
+    return swapChain;
 }
 
-void Engine::destroySwapChain(std::unique_ptr<SwapChain> swapChain) {
+void Engine::createSwapChainImageViews(SwapChain* const swapChain) const {
+    using namespace std::ranges;
+    const auto toImageView = [this, swapChain](const auto& image) {
+        constexpr auto aspectFlags = vk::ImageAspectFlagBits::eColor;
+        constexpr auto mipLevels = 1;
+        const auto viewInfo = vk::ImageViewCreateInfo{
+            {}, image, vk::ImageViewType::e2D, swapChain->_swapChainImageFormat, {}, { aspectFlags, 0, mipLevels, 0, 1 } };
+        return _device.createImageView(viewInfo);
+    };
+    const auto imageViews = swapChain->_swapChainImages | views::transform(toImageView);
+    swapChain->_swapChainImageViews = std::vector(imageViews.begin(), imageViews.end());
+}
 
+void Engine::destroySwapChain(std::unique_ptr<SwapChain>&& swapChain) const noexcept {
+    using namespace std::ranges;
+    for_each(swapChain->_swapChainImageViews, [this](const auto& it) { _device.destroyImageView(it); });
+
+    _device.destroySwapchainKHR(swapChain->_swapChain);
 }

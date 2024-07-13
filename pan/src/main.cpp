@@ -2,8 +2,9 @@
 #include <plog/Appenders/ColorConsoleAppender.h>
 #include <plog/Formatters/TxtFormatter.h>
 
-#include <engine/Context.h>
 #include <engine/Engine.h>
+
+#include "Context.h"
 
 
 int main(int argc, char* argv[]) {
@@ -14,11 +15,15 @@ int main(int argc, char* argv[]) {
     // Create a window context
     const auto context = Context::create("pan");
 
-    // Create an engine
+    // Create an engine and attach a surface to it
     const auto engine = Engine::create();
     engine->attachSurface(context->getNativeWindow());
 
+    // Create a swap chain
+    auto swapChain = engine->createSwapChain(context->getNativeWindow());
+
     // Destroy all resources
+    engine->destroySwapChain(std::move(swapChain));
     engine->detachSurface();
     engine->destroy();
     context->destroy();
