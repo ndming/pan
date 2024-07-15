@@ -24,8 +24,8 @@ public:
     [[nodiscard]] SwapChain* createSwapChain(GLFWwindow* window, SwapChain::MSAA msaa = SwapChain::MSAA::x1) const;
     void destroySwapChain(SwapChain* swapChain) const noexcept;
 
-    [[nodiscard]] Renderer* createRenderer(const SwapChain* swapChain, Renderer::Pipeline pipeline) const;
-    void destroyRenderer(Renderer* renderer) const noexcept;
+    [[nodiscard]] Renderer* createRenderer(SwapChain* swapChain, Renderer::Pipeline pipeline) const;
+    void destroyRenderer(const Renderer* renderer) const noexcept;
 
     void flushAndWait() const;
 
@@ -41,9 +41,6 @@ private:
     vk::DebugUtilsMessengerEXT _debugMessenger{};
 #endif
 
-    bool _framebufferResized = false;
-    static void framebufferResizeCallback(GLFWwindow*, int, int);
-
     vk::SurfaceKHR _surface{};
 
     vk::PhysicalDevice _physicalDevice{};
@@ -57,4 +54,20 @@ private:
     vk::Queue _presentQueue{};
     vk::Queue _computeQueue{};
     void createLogicalDevice(const vk::PhysicalDeviceFeatures& features);
+
+    vk::CommandPool _graphicsCommandPool{};
+    vk::CommandPool _transferCommandPool{};
+    void createCommandPools();
+    [[nodiscard]] vk::CommandBuffer beginSingleTimeTransferCommands() const;
+    void endSingleTimeTransferCommands(const vk::CommandBuffer& commandBuffer) const;
+
+    void createShaderStorageBuffers(Renderer* renderer) const;
+
+    void createDescriptorPool(Renderer* renderer) const;
+    void createComputeDescriptorSets(Renderer* renderer) const;
+
+    void createCommandBuffers(Renderer* renderer) const;
+
+    void createDrawingSyncObjects(Renderer* renderer) const;
+    void createComputeSyncObjects(Renderer* renderer) const;
 };

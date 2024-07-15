@@ -24,9 +24,9 @@ GLFWwindow* Context::getNativeWindow() const {
     return _window;
 }
 
-void Context::loop(const std::function<void()> &onFrame) const {
+void Context::loop(const std::function<void(double)> &onFrame) const {
     while (!glfwWindowShouldClose(_window)) {
         glfwPollEvents();
-        onFrame();
+        onFrame(glfwGetTime());
     }
 }

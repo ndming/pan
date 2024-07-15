@@ -9,7 +9,6 @@ set(SRCS
         src/SwapChain.cpp
         src/Translator.cpp
         src/bootstrap/DebugMessenger.cpp
-        src/bootstrap/GraphicsPipelineBuilder.cpp
         src/bootstrap/InstanceBuilder.cpp
         src/bootstrap/PhysicalDeviceSelector.cpp
         src/bootstrap/QueueFamilyFinder.cpp
@@ -35,29 +34,31 @@ target_link_libraries(${TARGET} PUBLIC glfw)
 target_link_libraries(${TARGET} PRIVATE ${Vulkan_LIBRARIES})
 target_link_libraries(${TARGET} PRIVATE glm::glm)
 
-# Compile shaders to the build directory
+# Find the GLSL compiler
 find_program(GLSL_COMPILER glslc HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
 message(STATUS "Using GLSL compiler at: ${GLSL_COMPILER}")
 
-file(GLOB_RECURSE GLSL_SOURCE_FILES "shaders/*.frag" "shaders/*.vert" "shaders/*.comp")
+# Define the output directory for SPIR-V binaries
+set(SPIR_V_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+file(MAKE_DIRECTORY ${SPIR_V_OUTPUT_DIR})
+
+set(GLSL_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/particle.vert
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/particle.frag
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/particle.comp
+)
 foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
     get_filename_component(FILE_NAME ${GLSL_FILE} NAME)
-    message(STATUS "Compiling shader file: ${FILE_NAME}")
-
-    set(SPIR_V_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
-    file(MAKE_DIRECTORY ${SPIR_V_DIR})
-
     set(SPIR_V "${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME}.spv")
+
     add_custom_command(
             OUTPUT ${SPIR_V}
             COMMAND ${GLSL_COMPILER} -o ${SPIR_V} ${GLSL_FILE}
             DEPENDS ${GLSL_FILE}
-            COMMENT "Compiling ${GLSL_FILE} to ${SPIR_V}")
+            COMMENT "Compiling ${FILE_NAME}")
     list(APPEND SPIR_V_BINARY_FILES ${SPIR_V})
 endforeach(GLSL_FILE)
 
 # Add a custom target to build all SPIR-V binaries
 add_custom_target(compile_shaders ALL DEPENDS ${SPIR_V_BINARY_FILES})
-
-# Ensure the main target depends on the compiled shaders
 add_dependencies(${TARGET} compile_shaders)

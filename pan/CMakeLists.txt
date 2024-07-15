@@ -17,3 +17,14 @@ target_include_directories(${TARGET} PRIVATE src)
 # Dependencies
 target_link_libraries(${TARGET} PRIVATE engine)
 target_link_libraries(${TARGET} PRIVATE gui)
+
+# Shader resources
+set(SPIR_V_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+file(MAKE_DIRECTORY ${SPIR_V_OUTPUT_DIR})
+add_dependencies(${TARGET} compile_shaders)
+add_custom_command(
+        TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_BINARY_DIR}/libs/engine/shaders
+        ${SPIR_V_OUTPUT_DIR}
+)

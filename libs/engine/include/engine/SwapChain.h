@@ -1,10 +1,13 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
+
+class ResourceAllocator;
 
 class SwapChain {
 public:
@@ -31,6 +34,14 @@ private:
     vk::Extent2D _imageExtent{};
     vk::SampleCountFlagBits _msaa{ vk::SampleCountFlagBits::e1 };
 
+    GLFWwindow* _window{ nullptr };
+    ResourceAllocator* _allocator{ nullptr };
+    vk::SurfaceCapabilitiesKHR _capabilities{};
+    vk::PresentModeKHR _presentMode{ vk::PresentModeKHR::eFifo };
+    uint32_t _graphicsFamily{};
+    uint32_t _presentFamily{};
+    vk::SurfaceKHR _surface{};
+
     using SurfaceFormat = vk::SurfaceFormatKHR;
     using PresentMode = vk::PresentModeKHR;
     using SurfaceCapabilities = vk::SurfaceCapabilitiesKHR;
@@ -47,6 +58,9 @@ private:
     // by which time the render pass is available
     std::vector<vk::Framebuffer> _framebuffers{};
 
+    void recreate(const vk::Device& device, const vk::RenderPass& renderPass);
+
     friend class Engine;
+    friend class Renderer;
     friend class SwapChainBuilder;
 };

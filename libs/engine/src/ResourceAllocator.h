@@ -37,4 +37,6 @@ private:
     explicit ResourceAllocator(VmaAllocator allocator) : _allocator{ allocator } {}
 
     VmaAllocator _allocator{};
+
+    friend class Engine;
 };

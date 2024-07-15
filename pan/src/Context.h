@@ -14,7 +14,7 @@ public:
 
     [[nodiscard]] GLFWwindow* getNativeWindow() const;
 
-    void loop(const std::function<void()>& onFrame) const;
+    void loop(const std::function<void(double)>& onFrame) const;
 
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
