@@ -25,13 +25,13 @@ vk::SampleCountFlagBits Translator::toSupportSampleCount(const SwapChain::MSAA m
     }
     using enum vk::SampleCountFlagBits;
     switch (maxSampleCount) {
-        case e2: PLOGW << "Falling back MSAA configuration: the device only supports up to x2 MSAA"; return e2;
-        case e4: PLOGW << "Falling back MSAA configuration: the device only supports up to x4 MSAA"; return e4;
-        case e8: PLOGW << "Falling back MSAA configuration: the device only supports up to x8 MSAA"; return e8;
-        case e16: PLOGW << "Falling back MSAA configuration: the device only supports up to x16 MSAA"; return e16;
-        case e32: PLOGW << "Falling back MSAA configuration: the device only supports up to x32 MSAA"; return e32;
-        case e64: PLOGW << "Falling back MSAA configuration: the device only supports up to x64 MSAA"; return e64;
-        default: PLOGW << "Falling back MSAA configuration: the device only supports up to x1 MSAA"; return e1;
+        case e2: PLOGW << "Falling back MSAA configuration: your hardware only supports up to x2 MSAA"; return e2;
+        case e4: PLOGW << "Falling back MSAA configuration: your hardware only supports up to x4 MSAA"; return e4;
+        case e8: PLOGW << "Falling back MSAA configuration: your hardware only supports up to x8 MSAA"; return e8;
+        case e16: PLOGW << "Falling back MSAA configuration: your hardware only supports up to x16 MSAA"; return e16;
+        case e32: PLOGW << "Falling back MSAA configuration: your hardware only supports up to x32 MSAA"; return e32;
+        case e64: PLOGW << "Falling back MSAA configuration: your hardware only supports up to x64 MSAA"; return e64;
+        default: PLOGW << "Falling back MSAA configuration: your hardware only supports up to x1 MSAA"; return e1;
     }
 
 }

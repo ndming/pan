@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 
     // Create a swap chain and a renderer
     const auto swapChain = engine->createSwapChain(context->getNativeWindow(), SwapChain::MSAA::x8);
-    const auto renderer = engine->createRenderer(swapChain);
+    const auto renderer = engine->createRenderer(swapChain, Renderer::Pipeline::Particle);
 
     // The rendering loop
     context->loop([] {});

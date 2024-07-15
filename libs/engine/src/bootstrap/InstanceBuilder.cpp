@@ -1,6 +1,6 @@
 #include <GLFW/glfw3.h>
 
-#ifdef NDEBUG
+#ifndef NDEBUG
 #include <functional>
 #include <unordered_set>
 #include <ranges>
@@ -39,7 +39,7 @@ vk::Instance InstanceBuilder::build() const {
     const auto appInfo = vk::ApplicationInfo{
         _applicationName.data(), _applicationVersion, "None", _apiVersion, _apiVersion };
 
-#ifdef NDEBUG
+#ifndef NDEBUG
     // Check for layer support
     using namespace std::ranges;
     const auto properties = vk::enumerateInstanceLayerProperties();
@@ -62,7 +62,7 @@ vk::Instance InstanceBuilder::build() const {
     const auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     auto requiredExtensions = std::vector(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-#ifdef NDEBUG
+#ifndef NDEBUG
     requiredExtensions.push_back(vk::EXTDebugUtilsExtensionName);
 #endif
 
@@ -74,7 +74,7 @@ vk::Instance InstanceBuilder::build() const {
     createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
     createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
-#ifdef NDEBUG
+#ifndef NDEBUG
     createInfo.enabledLayerCount = static_cast<uint32_t>(_layers.size());
     createInfo.ppEnabledLayerNames = _layers.data();
 

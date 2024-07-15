@@ -17,7 +17,7 @@
 #include "engine/Engine.h"
 
 
-#ifdef NDEBUG
+#ifndef NDEBUG
 static constexpr std::array mValidationLayers{
     "VK_LAYER_KHRONOS_validation",
 };
@@ -62,19 +62,19 @@ Engine::Engine() {
         .applicationName("pan")
         .applicationVersion(1, 0, 0)
         .apiVersion(1, 2, 0)
-#ifdef NDEBUG
+#ifndef NDEBUG
         .layers(mValidationLayers.data(), mValidationLayers.size())
         .callback(mCallback)
 #endif
         .build();
 
-#ifdef NDEBUG
+#ifndef NDEBUG
     _debugMessenger = DebugMessenger::create(_instance, mCallback);
 #endif
 }
 
 void Engine::destroy() const noexcept {
-#ifdef NDEBUG
+#ifndef NDEBUG
     DebugMessenger::destroy(_instance, _debugMessenger);
 #endif
     _instance.destroy(nullptr);
@@ -142,7 +142,7 @@ void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features) {
         _presentFamily = finder.getPresentFamily();
         _computeFamily = finder.getComputeFamily();
 
-#ifdef NDEBUG
+#ifndef NDEBUG
         PLOG_DEBUG << "Graphics queue family index: " << _graphicsFamily.value();
         PLOG_DEBUG << "Present queue family index: " << _presentFamily.value();
         PLOG_DEBUG << "Compute queue family index: " << _computeFamily.value();
@@ -158,7 +158,7 @@ void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features) {
         _graphicsFamily = finder.getGraphicsFamily();
         _presentFamily = finder.getPresentFamily();
 
-#ifdef NDEBUG
+#ifndef NDEBUG
         PLOG_DEBUG << "Graphics queue family index: " << _graphicsFamily.value();
         PLOG_DEBUG << "Present queue family index: " << _presentFamily.value();
 #endif
@@ -191,7 +191,7 @@ void Engine::createLogicalDevice(const vk::PhysicalDeviceFeatures& features) {
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(mDeviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = mDeviceExtensions.data();
 
-#ifdef NDEBUG
+#ifndef NDEBUG
     deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(mValidationLayers.size());
     deviceCreateInfo.ppEnabledLayerNames = mValidationLayers.data();
 #else

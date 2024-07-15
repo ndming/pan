@@ -37,10 +37,16 @@ target_link_libraries(${TARGET} PRIVATE glm::glm)
 
 # Compile shaders to the build directory
 find_program(GLSL_COMPILER glslc HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
+message(STATUS "Using GLSL compiler at: ${GLSL_COMPILER}")
+
 file(GLOB_RECURSE GLSL_SOURCE_FILES "shaders/*.frag" "shaders/*.vert" "shaders/*.comp")
 foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
     get_filename_component(FILE_NAME ${GLSL_FILE} NAME)
     message(STATUS "Compiling shader file: ${FILE_NAME}")
+
+    set(SPIR_V_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+    file(MAKE_DIRECTORY ${SPIR_V_DIR})
+
     set(SPIR_V "${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME}.spv")
     add_custom_command(
             OUTPUT ${SPIR_V}

@@ -37,7 +37,7 @@ private:
 
     vk::Instance _instance{};
 
-#ifdef NDEBUG
+#ifndef NDEBUG
     vk::DebugUtilsMessengerEXT _debugMessenger{};
 #endif
 
