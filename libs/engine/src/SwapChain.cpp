@@ -1,5 +1,6 @@
 #include <ranges>
 
+#include <plog/Log.h>
 #include <GLFW/glfw3.h>
 
 #include "bootstrap/SwapChainBuilder.h"
@@ -64,22 +65,20 @@ void SwapChain::recreate(const vk::Device& device, const vk::RenderPass& renderP
 
     device.destroySwapchainKHR(_nativeObject);
 
-    auto minImageCount = _capabilities.minImageCount + 1;
-    if (_capabilities.maxImageCount > 0 && minImageCount > _capabilities.maxImageCount) {
-        minImageCount = _capabilities.maxImageCount;
-    }
-
     const auto newSwapChain = SwapChainBuilder(_graphicsFamily, _presentFamily)
-        .surfaceFormat(_imageFormat)
-        .presentMode(_presentMode)
+        .surfaceFormat(chooseSwapSurfaceFormat(_formats))
+        .presentMode(chooseSwapPresentMode(_presentModes))
         .extent(chooseSwapExtent(_capabilities, _window))
-        .minImageCount(minImageCount)
+        .minImageCount(_minImageCount)
         .imageUsage(vk::ImageUsageFlagBits::eColorAttachment)
         .preTransform(_capabilities.currentTransform)
         .sampleCount(_msaa)
         .compositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
         .clipped(vk::True)
         .build(device, _surface, _allocator);
+
+    const auto extent = chooseSwapExtent(_capabilities, _window);
+    PLOGD << "In recreate swap chain - new swap extent: " << extent.width << " | " << extent.height;
 
     _nativeObject = newSwapChain->_nativeObject;
     _images = std::move(newSwapChain->_images);

@@ -27,6 +27,7 @@ public:
 private:
     SwapChain() = default;
 
+public:
     vk::SwapchainKHR _nativeObject{};
     std::vector<vk::Image> _images{};
     std::vector<vk::ImageView> _imageViews{};
@@ -37,10 +38,12 @@ private:
     GLFWwindow* _window{ nullptr };
     ResourceAllocator* _allocator{ nullptr };
     vk::SurfaceCapabilitiesKHR _capabilities{};
-    vk::PresentModeKHR _presentMode{ vk::PresentModeKHR::eFifo };
+    std::vector<vk::SurfaceFormatKHR> _formats{};
+    std::vector<vk::PresentModeKHR> _presentModes{};
     uint32_t _graphicsFamily{};
     uint32_t _presentFamily{};
     vk::SurfaceKHR _surface{};
+    uint32_t _minImageCount{};
 
     using SurfaceFormat = vk::SurfaceFormatKHR;
     using PresentMode = vk::PresentModeKHR;

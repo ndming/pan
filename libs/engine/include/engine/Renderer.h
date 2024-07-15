@@ -14,10 +14,10 @@ public:
     };
 
     bool beginFrame(SwapChain* swapChain);
-    void endFrame();
+    void endFrame(SwapChain* swapChain);
 
     void compute(double frameTimeSeconds) const;
-    void render() const;
+    void render(SwapChain* swapChain) const;
 
     Renderer(const Renderer&) = delete;
     Renderer& operator=(const Renderer&) = delete;
@@ -25,6 +25,7 @@ public:
 private:
     Renderer() = default;
 
+public:
     vk::Device _device{};
     vk::Queue _graphicsQueue{};
     vk::Queue _presentQueue{};
@@ -55,7 +56,7 @@ private:
 
     std::vector<vk::CommandBuffer> _drawingCommandBuffers{};
     std::vector<vk::CommandBuffer> _computeCommandBuffers{};
-    void recordDrawingCommands(const vk::CommandBuffer& buffer, uint32_t imageIndex) const;
+    void recordDrawingCommands(const vk::CommandBuffer& buffer, uint32_t imageIndex, SwapChain* swapChain) const;
     void recordComputeCommands(const vk::CommandBuffer& buffer, uint32_t currentFrame, float deltaTime) const;
 
     std::vector<vk::Semaphore> _imageAvailableSemaphores{};
@@ -66,7 +67,6 @@ private:
     std::vector<vk::Fence> _computeInFlightFences;
 
     uint32_t _currentFrame = 0;
-    SwapChain* _swapChain{ nullptr };
     vk::ResultValue<uint32_t> _imageIndex{ vk::Result::eErrorUnknown, 0 };
 
     friend class Engine;

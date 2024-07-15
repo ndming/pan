@@ -1,5 +1,7 @@
 #include <limits>
 
+#include <plog/Log.h>
+
 #include "Translator.h"
 
 #include "engine/Renderer.h"
@@ -17,24 +19,24 @@ bool Renderer::beginFrame(SwapChain* const swapChain) {
     _imageIndex = _device.acquireNextImageKHR(
         swapChain->_nativeObject, limits::max(), _imageAvailableSemaphores[_currentFrame], nullptr);
     if (_imageIndex.result == vk::Result::eErrorOutOfDateKHR) {
+        PLOGD << "Recreating swap chain in beginFrame...";
         swapChain->recreate(_device, _renderPass);
         return false;
     }
     if (_imageIndex.result != vk::Result::eSuccess && _imageIndex.result != vk::Result::eSuboptimalKHR) {
         throw std::runtime_error("Failed to acquire swap chain image!");
     }
-    _swapChain = swapChain;
     return true;
 }
 
-void Renderer::endFrame() {
+void Renderer::endFrame(SwapChain* const swapChain) {
     // Present the drawn images
     const auto presentInfo = vk::PresentInfoKHR{
-        1, &_renderFinishedSemaphores[_currentFrame], 1, &_swapChain->_nativeObject, &_imageIndex.value };
+        1, &_renderFinishedSemaphores[_currentFrame], 1, &swapChain->_nativeObject, &_imageIndex.value };
     if (const auto result = _presentQueue.presentKHR(&presentInfo);
-        result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _framebufferResized) {
+         result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _framebufferResized) {
         _framebufferResized = false;
-        _swapChain->recreate(_device, _renderPass);
+        swapChain->recreate(_device, _renderPass);
     } else if (result != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to present swap chain image!");
     }
@@ -67,12 +69,12 @@ void Renderer::compute(const double frameTimeSeconds) const {
     _computeQueue.submit(computeSubmitInfo, _computeInFlightFences[_currentFrame]);
 }
 
-void Renderer::render() const {
+void Renderer::render(SwapChain* const swapChain) const {
     // Only reset the fence if we are submitting work
     _device.resetFences(_drawingInFlightFences[_currentFrame]);
 
     _drawingCommandBuffers[_currentFrame].reset();
-    recordDrawingCommands(_drawingCommandBuffers[_currentFrame], _imageIndex.value);
+    recordDrawingCommands(_drawingCommandBuffers[_currentFrame], _imageIndex.value, swapChain);
 
     // Submit draw commands
     constexpr vk::PipelineStageFlags waitStages[] {
@@ -90,7 +92,7 @@ void Renderer::framebufferResizeCallback(GLFWwindow* window, [[maybe_unused]] co
     renderer->_framebufferResized = true;
 }
 
-void Renderer::recordDrawingCommands(const vk::CommandBuffer &buffer, const uint32_t imageIndex) const {
+void Renderer::recordDrawingCommands(const vk::CommandBuffer &buffer, const uint32_t imageIndex, SwapChain* const swapChain) const {
     buffer.begin(vk::CommandBufferBeginInfo{});
 
     // Start the render pass
@@ -98,7 +100,7 @@ void Renderer::recordDrawingCommands(const vk::CommandBuffer &buffer, const uint
         vk::ClearColorValue{ 0.0f, 0.0f, 0.0f, 1.0f },
     };
     const auto renderPassInfo = vk::RenderPassBeginInfo{
-        _renderPass, _swapChain->_framebuffers[imageIndex], { { 0, 0 }, _swapChain->_imageExtent },
+        _renderPass, swapChain->_framebuffers[imageIndex], { { 0, 0 }, swapChain->_imageExtent },
         static_cast<uint32_t>(clearValues.size()), clearValues.data() };
     buffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
@@ -107,10 +109,10 @@ void Renderer::recordDrawingCommands(const vk::CommandBuffer &buffer, const uint
 
     // Set viewport and scissor state
     const auto viewport = vk::Viewport{
-        0.0f, 0.0f, static_cast<float>(_swapChain->_imageExtent.width), static_cast<float>(_swapChain->_imageExtent.height),
+        0.0f, 0.0f, static_cast<float>(swapChain->_imageExtent.width), static_cast<float>(swapChain->_imageExtent.height),
         0.0f, 1.0f };
     buffer.setViewport(0, viewport);
-    buffer.setScissor(0, vk::Rect2D{ { 0, 0 }, _swapChain->_imageExtent });
+    buffer.setScissor(0, vk::Rect2D{ { 0, 0 }, swapChain->_imageExtent });
 
     // Bind the storage buffer
     buffer.bindVertexBuffers(0, _shaderStorageBuffers[_currentFrame], vk::DeviceSize{ 0 });

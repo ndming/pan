@@ -248,8 +248,8 @@ SwapChain* Engine::createSwapChain(GLFWwindow* const window, const SwapChain::MS
     }
 
     const auto capabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
-    const auto formats = _physicalDevice.getSurfaceFormatsKHR(_surface);
-    const auto presentModes = _physicalDevice.getSurfacePresentModesKHR(_surface);
+    auto formats = _physicalDevice.getSurfaceFormatsKHR(_surface);
+    auto presentModes = _physicalDevice.getSurfacePresentModesKHR(_surface);
 
     const auto surfaceFormat = SwapChain::chooseSwapSurfaceFormat(formats);
     const auto presentMode = SwapChain::chooseSwapPresentMode(presentModes);
@@ -276,10 +276,12 @@ SwapChain* Engine::createSwapChain(GLFWwindow* const window, const SwapChain::MS
     swapChain->_window = window;
     swapChain->_allocator = mAllocator.get();
     swapChain->_capabilities = capabilities;
-    swapChain->_presentMode = presentMode;
+    swapChain->_formats = std::move(formats);
+    swapChain->_presentModes = std::move(presentModes);
     swapChain->_graphicsFamily = _graphicsFamily.value();
     swapChain->_presentFamily = _presentFamily.value();
     swapChain->_surface = _surface;
+    swapChain->_minImageCount = minImageCount;
 
     return swapChain;
 }

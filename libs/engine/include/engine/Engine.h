@@ -35,6 +35,7 @@ public:
 private:
     Engine();
 
+public:
     vk::Instance _instance{};
 
 #ifndef NDEBUG

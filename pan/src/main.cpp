@@ -29,8 +29,8 @@ int main(int argc, char* argv[]) {
         context->loop([renderer, swapChain] (const double frameTimeSeconds) {
             renderer->compute(frameTimeSeconds);
             if (renderer->beginFrame(swapChain)) {
-                renderer->render();
-                renderer->endFrame();
+                renderer->render(swapChain);
+                renderer->endFrame(swapChain);
             }
         });
 
