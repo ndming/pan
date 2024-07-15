@@ -3,7 +3,10 @@
 #include "DebugMessenger.h"
 
 
-vk::DebugUtilsMessengerEXT DebugMessenger::create(const vk::Instance &instance) {
+vk::DebugUtilsMessengerEXT DebugMessenger::create(
+    const vk::Instance& instance,
+    PFN_vkDebugUtilsMessengerCallbackEXT callback
+) {
     using MessageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT;
     using MessageType = vk::DebugUtilsMessageTypeFlagBitsEXT;
     const auto debugCreateInfo = vk::DebugUtilsMessengerCreateInfoEXT{ {},
@@ -49,25 +52,4 @@ void DebugMessenger::destroyDebugUtilsMessengerEXT(
         vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT")); func != nullptr) {
         func(instance, debugMessenger, reinterpret_cast<const VkAllocationCallbacks*>(pAllocator));
         }
-}
-
-VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugMessenger::callback(
-    const VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    [[maybe_unused]] const VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-    [[maybe_unused]] void* const userData
-) {
-    switch (messageSeverity) {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            PLOGV << pCallbackData->pMessage; break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            PLOGI << pCallbackData->pMessage; break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            PLOGW << pCallbackData->pMessage; break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            PLOGE << pCallbackData->pMessage; break;
-        default: break;
-    }
-
-    return vk::False;
 }

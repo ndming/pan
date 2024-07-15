@@ -23,3 +23,10 @@ void Context::destroy() const noexcept {
 GLFWwindow* Context::getNativeWindow() const {
     return _window;
 }
+
+void Context::loop(const std::function<void()> &onFrame) const {
+    while (!glfwWindowShouldClose(_window)) {
+        glfwPollEvents();
+        onFrame();
+    }
+}

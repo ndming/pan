@@ -9,6 +9,7 @@
 #include <GLFW/glfw3.h>
 
 #include "engine/DeviceFeature.h"
+#include "engine/Renderer.h"
 #include "engine/SwapChain.h"
 
 
@@ -20,8 +21,13 @@ public:
     void attachSurface(GLFWwindow* window, const std::vector<DeviceFeature>& features = {});
     void detachSurface() const noexcept;
 
-    [[nodiscard]] std::unique_ptr<SwapChain> createSwapChain(GLFWwindow* window) const;
-    void destroySwapChain(std::unique_ptr<SwapChain>&& swapChain) const noexcept;
+    [[nodiscard]] SwapChain* createSwapChain(GLFWwindow* window, SwapChain::MSAA msaa = SwapChain::MSAA::x1) const;
+    void destroySwapChain(SwapChain* swapChain) const noexcept;
+
+    [[nodiscard]] Renderer* createRenderer(const SwapChain* swapChain, Renderer::Pipeline pipeline) const;
+    void destroyRenderer(Renderer* renderer) const noexcept;
+
+    void flushAndWait() const;
 
     Engine(const Engine&) = delete;
     Engine& operator=(const Engine&) = delete;
@@ -51,8 +57,4 @@ private:
     vk::Queue _presentQueue{};
     vk::Queue _computeQueue{};
     void createLogicalDevice(const vk::PhysicalDeviceFeatures& features);
-    void createAllocator() const;
-
-    SwapChain* initializeSwapChain(GLFWwindow* window) const;
-    void createSwapChainImageViews(SwapChain* swapChain) const;
 };

@@ -19,11 +19,20 @@ int main(int argc, char* argv[]) {
     const auto engine = Engine::create();
     engine->attachSurface(context->getNativeWindow());
 
-    // Create a swap chain
-    auto swapChain = engine->createSwapChain(context->getNativeWindow());
+    // Create a swap chain and a renderer
+    const auto swapChain = engine->createSwapChain(context->getNativeWindow(), SwapChain::MSAA::x8);
+    const auto renderer = engine->createRenderer(swapChain);
+
+    // The rendering loop
+    context->loop([] {});
+
+    // When we exit the loop, drawing and presentation operations may still be going on.
+    // This will ensure we are not cleaning up resources while those operations are happening.
+    engine->flushAndWait();
 
     // Destroy all resources
-    engine->destroySwapChain(std::move(swapChain));
+    engine->destroyRenderer(renderer);
+    engine->destroySwapChain(swapChain);
     engine->detachSurface();
     engine->destroy();
     context->destroy();

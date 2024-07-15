@@ -8,27 +8,50 @@
 #include "bootstrap/InstanceBuilder.h"
 #include "bootstrap/PhysicalDeviceSelector.h"
 #include "bootstrap/QueueFamilyFinder.h"
-#include "bootstrap/Translator.h"
+#include "bootstrap/RenderPassBuilder.h"
+#include "bootstrap/SwapChainBuilder.h"
 
-#include "external/VmaUsage.h"
+#include "ResourceAllocator.h"
+#include "Translator.h"
 
 #include "engine/Engine.h"
 
 
 #ifdef NDEBUG
-static constexpr std::array pValidationLayers{
+static constexpr std::array mValidationLayers{
     "VK_LAYER_KHRONOS_validation",
 };
+
+VKAPI_ATTR vk::Bool32 VKAPI_CALL mCallback(
+    const VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    [[maybe_unused]] const VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+    [[maybe_unused]] void* const userData
+) {
+    switch (messageSeverity) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            PLOGV << pCallbackData->pMessage; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            PLOGI << pCallbackData->pMessage; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            PLOGW << pCallbackData->pMessage; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            PLOGE << pCallbackData->pMessage; break;
+        default: break;
+    }
+
+    return vk::False;
+}
 #endif
 
-static constexpr std::array pDeviceExtensions{
+static constexpr std::array mDeviceExtensions{
     vk::KHRSwapchainExtensionName,         // to present to a surface
     vk::EXTMemoryBudgetExtensionName,      // to make our allocator estimate memory budget more accurately
     vk::EXTMemoryPriorityExtensionName,    // incorporate memory priority to the allocator
 };
 
 // We don't make the allocator a memeber of Engine because doing so would require the vma library to be public
-static VmaAllocator pAllocator{};
+static auto mAllocator = std::unique_ptr<ResourceAllocator>{};
 
 std::unique_ptr<Engine> Engine::create() {
     return std::unique_ptr<Engine>(new Engine{});
@@ -40,12 +63,13 @@ Engine::Engine() {
         .applicationVersion(1, 0, 0)
         .apiVersion(1, 2, 0)
 #ifdef NDEBUG
-        .layers(pValidationLayers.data(), pValidationLayers.size())
+        .layers(mValidationLayers.data(), mValidationLayers.size())
+        .callback(mCallback)
 #endif
         .build();
 
 #ifdef NDEBUG
-    _debugMessenger = DebugMessenger::create(_instance);
+    _debugMessenger = DebugMessenger::create(_instance, mCallback);
 #endif
 }
 
@@ -72,11 +96,16 @@ void Engine::attachSurface(GLFWwindow* const window, const std::vector<DeviceFea
         throw std::runtime_error("Failed to create a window surface!");
     }
 
-    // Find a suitable GPU and create a logical device and an allocator
+    // Find a suitable GPU and create a logical device
     const auto deviceFeatures = Translator::toPhysicalDeviceFeatures(features);
     pickPhysicalDevice(deviceFeatures);
     createLogicalDevice(deviceFeatures);
-    createAllocator();
+
+    // Create a resource allocator
+    mAllocator = ResourceAllocator::Builder()
+        .flags(VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT)
+        .vulkanApiVersion(VK_API_VERSION_1_2)
+        .build(_instance, _physicalDevice, _device);
 }
 
 void Engine::framebufferResizeCallback(GLFWwindow* window, [[maybe_unused]] const int w, [[maybe_unused]] const int h) {
@@ -87,7 +116,7 @@ void Engine::framebufferResizeCallback(GLFWwindow* window, [[maybe_unused]] cons
 void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features) {
     // Find a list of possible candidate devices based on requested features
     const auto candidates = PhysicalDeviceSelector()
-        .extensions(std::vector(pDeviceExtensions.begin(), pDeviceExtensions.end()))
+        .extensions(std::vector(mDeviceExtensions.begin(), mDeviceExtensions.end()))
         .features(features)
         .select(_instance.enumeratePhysicalDevices(), _surface);
 
@@ -113,6 +142,12 @@ void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features) {
         _presentFamily = finder.getPresentFamily();
         _computeFamily = finder.getComputeFamily();
 
+#ifdef NDEBUG
+        PLOG_DEBUG << "Graphics queue family index: " << _graphicsFamily.value();
+        PLOG_DEBUG << "Present queue family index: " << _presentFamily.value();
+        PLOG_DEBUG << "Compute queue family index: " << _computeFamily.value();
+#endif
+
         const auto properties = _physicalDevice.getProperties();
         PLOG_INFO << "Found a suitable device: " << properties.deviceName.data();
         PLOG_INFO << "Detected async compute capability";
@@ -122,6 +157,11 @@ void Engine::pickPhysicalDevice(const vk::PhysicalDeviceFeatures& features) {
         finder.find(fallbackCandidate);
         _graphicsFamily = finder.getGraphicsFamily();
         _presentFamily = finder.getPresentFamily();
+
+#ifdef NDEBUG
+        PLOG_DEBUG << "Graphics queue family index: " << _graphicsFamily.value();
+        PLOG_DEBUG << "Present queue family index: " << _presentFamily.value();
+#endif
 
         const auto properties = _physicalDevice.getProperties();
         PLOG_INFO << "Found a suitable device: " << properties.deviceName.data();
@@ -148,12 +188,12 @@ void Engine::createLogicalDevice(const vk::PhysicalDeviceFeatures& features) {
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     deviceCreateInfo.pEnabledFeatures = &features;
-    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(pDeviceExtensions.size());
-    deviceCreateInfo.ppEnabledExtensionNames = pDeviceExtensions.data();
+    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(mDeviceExtensions.size());
+    deviceCreateInfo.ppEnabledExtensionNames = mDeviceExtensions.data();
 
 #ifdef NDEBUG
-    deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(pValidationLayers.size());
-    deviceCreateInfo.ppEnabledLayerNames = pValidationLayers.data();
+    deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(mValidationLayers.size());
+    deviceCreateInfo.ppEnabledLayerNames = mValidationLayers.data();
 #else
     deviceCreateInfo.enabledLayerCount = 0;
 #endif
@@ -166,45 +206,22 @@ void Engine::createLogicalDevice(const vk::PhysicalDeviceFeatures& features) {
     }
 }
 
-void Engine::createAllocator() const {
-    VmaVulkanFunctions vulkanFunctions = {};
-    vulkanFunctions.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
-    vulkanFunctions.vkGetDeviceProcAddr = &vkGetDeviceProcAddr;
-
-    VmaAllocatorCreateInfo allocatorCreateInfo = {};
-    allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT;
-    allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_2;
-    allocatorCreateInfo.physicalDevice = _physicalDevice;
-    allocatorCreateInfo.device = _device;
-    allocatorCreateInfo.instance = _instance;
-    allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
-
-    vmaCreateAllocator(&allocatorCreateInfo, &pAllocator);
-}
-
 void Engine::detachSurface() const noexcept {
     if (!_surface) {
         PLOG_WARNING << "Cannot detach a surface without having attached any, call Engine::attachSurface first";
         return;
     }
-    vmaDestroyAllocator(pAllocator);
+    mAllocator.reset(nullptr);
     _device.destroy(nullptr);
     _instance.destroySurfaceKHR(_surface);
 }
 
-std::unique_ptr<SwapChain> Engine::createSwapChain(GLFWwindow* const window) const {
+SwapChain* Engine::createSwapChain(GLFWwindow* const window, const SwapChain::MSAA msaa) const {
     if (!_surface) {
         PLOG_ERROR << "Cannot create a swap chain without having attached a surface, use Engine::attachSurface first";
         throw std::runtime_error("Failed to create a swap chain: surface is not initialized");
     }
 
-    const auto swapChain = initializeSwapChain(window);
-    createSwapChainImageViews(swapChain);
-
-    return std::unique_ptr<SwapChain>(swapChain);
-}
-
-SwapChain * Engine::initializeSwapChain(GLFWwindow* const window) const {
     const auto capabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
     const auto formats = _physicalDevice.getSurfaceFormatsKHR(_surface);
     const auto presentModes = _physicalDevice.getSurfacePresentModesKHR(_surface);
@@ -218,55 +235,47 @@ SwapChain * Engine::initializeSwapChain(GLFWwindow* const window) const {
         minImageCount = capabilities.maxImageCount;
     }
 
-    auto createInfo = vk::SwapchainCreateInfoKHR{};
-    createInfo.surface = _surface;
-    createInfo.minImageCount = minImageCount;
-    createInfo.imageFormat = surfaceFormat.format;
-    createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    createInfo.imageExtent = extent;
-    createInfo.presentMode = presentMode;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-    if (_graphicsFamily.value() != _presentFamily.value()) {
-        const uint32_t queueFamilyIndices[]{ _graphicsFamily.value(), _presentFamily.value() };
-        createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-        createInfo.queueFamilyIndexCount = 2;
-        createInfo.pQueueFamilyIndices = queueFamilyIndices;
-    } else {
-        createInfo.imageSharingMode = vk::SharingMode::eExclusive;
-        createInfo.queueFamilyIndexCount = 0;
-        createInfo.pQueueFamilyIndices = nullptr;
-    }
-    createInfo.preTransform = capabilities.currentTransform;
-    createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    createInfo.clipped = vk::True;
-    createInfo.oldSwapchain = nullptr;
-
-    const auto swapChain = new SwapChain{};
-    swapChain->_swapChain = _device.createSwapchainKHR(createInfo);
-    swapChain->_swapChainImages = _device.getSwapchainImagesKHR(swapChain->_swapChain);
-    swapChain->_swapChainImageFormat = surfaceFormat.format;
-    swapChain->_swapChainImageExtent = extent;
-
-    return swapChain;
+    return SwapChainBuilder(_graphicsFamily.value(), _presentFamily.value())
+        .surfaceFormat(surfaceFormat)
+        .presentMode(presentMode)
+        .extent(extent)
+        .minImageCount(minImageCount)
+        .imageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+        .preTransform(capabilities.currentTransform)
+        .sampleCount(Translator::toSupportSampleCount(msaa, _physicalDevice))
+        .compositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+        .clipped(vk::True)
+        .build(_device, _surface, mAllocator.get());
 }
 
-void Engine::createSwapChainImageViews(SwapChain* const swapChain) const {
+void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
+    _device.destroyImageView(swapChain->_colorImageView);
+    mAllocator->destroyImage(swapChain->_colorImage, static_cast<VmaAllocation>(swapChain->_colorImageAllocation));
+
     using namespace std::ranges;
-    const auto toImageView = [this, swapChain](const auto& image) {
-        constexpr auto aspectFlags = vk::ImageAspectFlagBits::eColor;
-        constexpr auto mipLevels = 1;
-        const auto viewInfo = vk::ImageViewCreateInfo{
-            {}, image, vk::ImageViewType::e2D, swapChain->_swapChainImageFormat, {}, { aspectFlags, 0, mipLevels, 0, 1 } };
-        return _device.createImageView(viewInfo);
-    };
-    const auto imageViews = swapChain->_swapChainImages | views::transform(toImageView);
-    swapChain->_swapChainImageViews = std::vector(imageViews.begin(), imageViews.end());
+    for_each(swapChain->_framebuffers, [this](const auto& it) { _device.destroyFramebuffer(it); });
+    for_each(swapChain->_imageViews, [this](const auto& it) { _device.destroyImageView(it); });
+
+    _device.destroySwapchainKHR(swapChain->_nativeObject);
+    delete swapChain;
 }
 
-void Engine::destroySwapChain(std::unique_ptr<SwapChain>&& swapChain) const noexcept {
-    using namespace std::ranges;
-    for_each(swapChain->_swapChainImageViews, [this](const auto& it) { _device.destroyImageView(it); });
+Renderer* Engine::createRenderer(const SwapChain* const swapChain, const Renderer::Pipeline pipeline) const {
+    const auto renderer = new Renderer{};
 
-    _device.destroySwapchainKHR(swapChain->_swapChain);
+    renderer->_renderPass = RenderPassBuider(swapChain->_imageFormat.format)
+        .sampleCount(swapChain->_msaa)
+        .build(_device);
+
+    return renderer;
+}
+
+void Engine::destroyRenderer(Renderer* const renderer) const noexcept {
+    _device.destroyRenderPass(renderer->_renderPass);
+
+    delete renderer;
+}
+
+void Engine::flushAndWait() const {
+    _device.waitIdle();
 }

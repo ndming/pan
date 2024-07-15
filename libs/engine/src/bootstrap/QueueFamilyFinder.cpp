@@ -17,20 +17,28 @@ bool QueueFamilyFinder::find(const vk::PhysicalDevice& candidate) {
     const auto queueFamilies = candidate.getQueueFamilyProperties();
 
     for (uint32_t i = 0; i < queueFamilies.size(); ++i) {
-        if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics && queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute) {
+        if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics &&
+            queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute) {
             // We don't care whether we're finding for a compute family or not. Vulkan requires an implementation which
             // supports graphics operations to have at least one queue family that supports both graphics and compute
             // operations. Therefore, we always look for the family supporting both operations so that the caller
             // has an option to fall back if async compute does not support.
             _graphicsFamily = i;
         }
-        if (_findPresentFamily && candidate.getSurfaceSupportKHR(i, _surface)) {
+
+        // It's important that we only update the present family if we have not found one, otherwise,
+        // we may end up with a queue family that is suboptimal to use
+        if (!_presentFamily.has_value() && _findPresentFamily && candidate.getSurfaceSupportKHR(i, _surface)) {
             _presentFamily = i;
         }
         if (_findComputeFamily && _asyncCompute && queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute &&
             !(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)) {
             // A dedicated compute family is a signal of support for async compute
             _computeFamily = i;
+        }
+
+        if (completed()) {
+            break;
         }
     }
 
@@ -44,7 +52,7 @@ bool QueueFamilyFinder::completed(const bool relaxAsyncComputeRequest) const {
         completed = completed && _presentFamily.has_value();
     }
 
-    if (_findComputeFamily && _asyncCompute &&!relaxAsyncComputeRequest) {
+    if (_findComputeFamily && _asyncCompute && !relaxAsyncComputeRequest) {
         completed = completed && _computeFamily.has_value();
     }
 

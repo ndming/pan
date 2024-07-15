@@ -12,6 +12,7 @@ public:
     InstanceBuilder& applicationVersion(int major, int minor, int patch);
     InstanceBuilder& apiVersion(int major, int minor, int patch);
     InstanceBuilder& layers(const char* const* layers, std::size_t count);
+    InstanceBuilder& callback(PFN_vkDebugUtilsMessengerCallbackEXT callback);
 
     [[nodiscard]] vk::Instance build() const;
 
@@ -20,4 +21,5 @@ private:
     uint32_t _applicationVersion{};
     uint32_t _apiVersion{};
     std::vector<const char*> _layers{};
+    PFN_vkDebugUtilsMessengerCallbackEXT _callback{};
 };

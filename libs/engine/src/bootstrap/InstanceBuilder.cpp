@@ -4,8 +4,6 @@
 #include <functional>
 #include <unordered_set>
 #include <ranges>
-
-#include "DebugMessenger.h"
 #endif
 
 #include "InstanceBuilder.h"
@@ -28,6 +26,11 @@ InstanceBuilder& InstanceBuilder::apiVersion(const int major, const int minor, c
 
 InstanceBuilder & InstanceBuilder::layers(const char* const* layers, const std::size_t count) {
     _layers = std::vector(layers, layers + count);
+    return *this;
+}
+
+InstanceBuilder & InstanceBuilder::callback(PFN_vkDebugUtilsMessengerCallbackEXT callback) {
+    _callback = callback;
     return *this;
 }
 
@@ -80,8 +83,7 @@ vk::Instance InstanceBuilder::build() const {
     const auto debugCreateInfo = vk::DebugUtilsMessengerCreateInfoEXT{ {},
         MessageSeverity::eVerbose | MessageSeverity::eWarning | MessageSeverity::eError,
         MessageType::eGeneral | MessageType::eValidation | MessageType::ePerformance,
-        DebugMessenger::callback, nullptr
-    };
+        _callback, nullptr };
     createInfo.pNext = &debugCreateInfo;
 #else
     createInfo.enabledLayerCount = 0;

@@ -5,16 +5,10 @@
 
 class DebugMessenger {
 public:
-    [[nodiscard]] static vk::DebugUtilsMessengerEXT create(const vk::Instance& instance);
+    [[nodiscard]] static vk::DebugUtilsMessengerEXT create(
+        const vk::Instance& instance, PFN_vkDebugUtilsMessengerCallbackEXT callback);
 
     static void destroy(const vk::Instance& instance, const vk::DebugUtilsMessengerEXT& messenger) noexcept;
-
-    static VKAPI_ATTR vk::Bool32 VKAPI_CALL callback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-        VkDebugUtilsMessageTypeFlagsEXT messageType,
-        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-        void* userData
-    );
 
     DebugMessenger() = delete;
 

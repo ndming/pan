@@ -1,0 +1,41 @@
+#version 450
+
+struct Particle {
+    vec2 position;
+    vec2 velocity;
+    vec4 color;
+};
+
+layout(push_constant) uniform Constants {
+    float deltaTime;
+} params;
+
+layout(std140, binding = 0) readonly buffer ParticleSSBOIn {
+    Particle particlesIn[ ];
+};
+
+layout(std140, binding = 1) buffer ParticleSSBOOut {
+    Particle particlesOut[ ];
+};
+
+// This defines the number invocations of this compute shader in the current work group
+// As we work on a linear 1D array of particles we only need to specify a number for x dimension
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+void main() {
+    // A variable that uniquely identifies the current compute shader invocation across the current dispatch
+    uint index = gl_GlobalInvocationID.x;
+
+    // Read from the last frame’s SSBO and writes the updated particle position to the SSBO for the current frame
+    Particle particleIn = particlesIn[index];
+    particlesOut[index].position = particleIn.position + particleIn.velocity.xy * params.deltaTime;
+    particlesOut[index].velocity = particleIn.velocity;
+
+    // Flip movement at window border
+    if ((particlesOut[index].position.x <= -1.0) || (particlesOut[index].position.x >= 1.0)) {
+        particlesOut[index].velocity.x = -particlesOut[index].velocity.x;
+    }
+    if ((particlesOut[index].position.y <= -1.0) || (particlesOut[index].position.y >= 1.0)) {
+        particlesOut[index].velocity.y = -particlesOut[index].velocity.y;
+    }
+}

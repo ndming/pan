@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string_view>
 
@@ -12,6 +13,8 @@ public:
     void destroy() const noexcept;
 
     [[nodiscard]] GLFWwindow* getNativeWindow() const;
+
+    void loop(const std::function<void()>& onFrame) const;
 
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
