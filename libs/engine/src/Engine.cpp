@@ -1,10 +1,7 @@
-#include <array>
-#include <numbers>
-#include <random>
-#include <ranges>
-#include <set>
+#include "engine/Engine.h"
 
-#include <plog/Log.h>
+#include "ResourceAllocator.h"
+#include "Translator.h"
 
 #include "bootstrap/DebugMessenger.h"
 #include "bootstrap/InstanceBuilder.h"
@@ -13,15 +10,19 @@
 #include "bootstrap/RenderPassBuilder.h"
 #include "bootstrap/SwapChainBuilder.h"
 
-#include "ResourceAllocator.h"
-#include "Translator.h"
+#include <GLFW/glfw3.h>
+#include <plog/Log.h>
 
-#include "engine/Engine.h"
+#include <array>
+#include <numbers>
+#include <random>
+#include <ranges>
+#include <set>
 
 
 #ifndef NDEBUG
 static constexpr std::array mValidationLayers{
-    "VK_LAYER_KHRONOS_validation",
+    "VK_LAYER_KHRONOS_validation",    // standard validation
 };
 
 VKAPI_ATTR vk::Bool32 VKAPI_CALL mCallback(
@@ -75,11 +76,8 @@ Engine::Engine() {
 #endif
 }
 
-void Engine::destroy() const noexcept {
-#ifndef NDEBUG
-    DebugMessenger::destroy(_instance, _debugMessenger);
-#endif
-    _instance.destroy(nullptr);
+SwapChain* Engine::createSwapChain(Context* const context) const {
+
 }
 
 void Engine::attachSurface(GLFWwindow* const window, const std::vector<DeviceFeature>& features) {
@@ -502,4 +500,11 @@ void Engine::createComputeSyncObjects(Renderer *renderer) const {
 
 void Engine::flushAndWait() const {
     _device.waitIdle();
+}
+
+void Engine::destroy() const noexcept {
+#ifndef NDEBUG
+    DebugMessenger::destroy(_instance, _debugMessenger);
+#endif
+    _instance.destroy(nullptr);
 }

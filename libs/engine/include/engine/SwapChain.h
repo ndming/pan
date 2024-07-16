@@ -4,9 +4,9 @@
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
-#include <GLFW/glfw3.h>
 
 
+struct GLFWwindow;
 class ResourceAllocator;
 
 class SwapChain {
@@ -27,7 +27,13 @@ public:
 private:
     SwapChain() = default;
 
-public:
+    GLFWwindow* _window{ nullptr };
+    vk::SurfaceKHR _surface{};
+
+    vk::PhysicalDevice _physicalDevice{};
+    uint32_t _graphicsFamily;
+    uint32_t _presentFamily;
+
     vk::SwapchainKHR _nativeObject{};
     std::vector<vk::Image> _images{};
     std::vector<vk::ImageView> _imageViews{};
@@ -35,14 +41,10 @@ public:
     vk::Extent2D _imageExtent{};
     vk::SampleCountFlagBits _msaa{ vk::SampleCountFlagBits::e1 };
 
-    GLFWwindow* _window{ nullptr };
     ResourceAllocator* _allocator{ nullptr };
     vk::SurfaceCapabilitiesKHR _capabilities{};
     std::vector<vk::SurfaceFormatKHR> _formats{};
     std::vector<vk::PresentModeKHR> _presentModes{};
-    uint32_t _graphicsFamily{};
-    uint32_t _presentFamily{};
-    vk::SurfaceKHR _surface{};
     uint32_t _minImageCount{};
 
     using SurfaceFormat = vk::SurfaceFormatKHR;

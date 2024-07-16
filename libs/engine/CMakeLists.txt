@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 set(TARGET engine)
 
 set(SRCS
+        src/Context.cpp
         src/Engine.cpp
         src/Renderer.cpp
         src/ResourceAllocator.cpp
@@ -30,7 +31,7 @@ target_include_directories(${TARGET} PRIVATE src)
 
 # Dependencies
 target_link_libraries(${TARGET} PUBLIC plog::plog)
-target_link_libraries(${TARGET} PUBLIC glfw)
+target_link_libraries(${TARGET} PRIVATE glfw)
 target_link_libraries(${TARGET} PRIVATE ${Vulkan_LIBRARIES})
 target_link_libraries(${TARGET} PRIVATE glm::glm)
 

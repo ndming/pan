@@ -6,8 +6,8 @@
 #include <vector>
 
 #include <vulkan/vulkan.hpp>
-#include <GLFW/glfw3.h>
 
+#include "engine/Context.h"
 #include "engine/DeviceFeature.h"
 #include "engine/Renderer.h"
 #include "engine/SwapChain.h"
@@ -23,6 +23,8 @@ public:
 
     [[nodiscard]] SwapChain* createSwapChain(GLFWwindow* window, SwapChain::MSAA msaa = SwapChain::MSAA::x1) const;
     void destroySwapChain(SwapChain* swapChain) const noexcept;
+
+    [[nodiscard]] SwapChain* createSwapChain(Context* context) const;
 
     [[nodiscard]] Renderer* createRenderer(SwapChain* swapChain, Renderer::Pipeline pipeline) const;
     void destroyRenderer(const Renderer* renderer) const noexcept;
