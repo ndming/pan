@@ -1,9 +1,10 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
 #include <vulkan/vulkan.hpp>
+
+#include <cstdint>
+#include <optional>
+#include <vector>
 
 
 struct GLFWwindow;
@@ -25,27 +26,28 @@ public:
     SwapChain& operator=(const SwapChain&) = delete;
 
 private:
-    SwapChain() = default;
+    SwapChain(
+        GLFWwindow* window,
+        const vk::Instance& instance,
+        const vk::PhysicalDeviceFeatures& features,
+        const std::vector<const char*>& extensions);
 
     GLFWwindow* _window{ nullptr };
     vk::SurfaceKHR _surface{};
 
     vk::PhysicalDevice _physicalDevice{};
-    uint32_t _graphicsFamily;
-    uint32_t _presentFamily;
+    std::optional<uint32_t> _graphicsFamily{};
+    std::optional<uint32_t> _presentFamily{};
+    std::optional<uint32_t> _computeFamily{};
 
-    vk::SwapchainKHR _nativeObject{};
+    vk::SwapchainKHR _swapChain{};
+    ResourceAllocator* _allocator{ nullptr };
+    void createSwapChain(const vk::Device& device, ResourceAllocator* allocator);
+
     std::vector<vk::Image> _images{};
     std::vector<vk::ImageView> _imageViews{};
-    vk::SurfaceFormatKHR _imageFormat{};
+    vk::Format _imageFormat{ vk::Format::eUndefined };
     vk::Extent2D _imageExtent{};
-    vk::SampleCountFlagBits _msaa{ vk::SampleCountFlagBits::e1 };
-
-    ResourceAllocator* _allocator{ nullptr };
-    vk::SurfaceCapabilitiesKHR _capabilities{};
-    std::vector<vk::SurfaceFormatKHR> _formats{};
-    std::vector<vk::PresentModeKHR> _presentModes{};
-    uint32_t _minImageCount{};
 
     using SurfaceFormat = vk::SurfaceFormatKHR;
     using PresentMode = vk::PresentModeKHR;
@@ -59,11 +61,12 @@ private:
     vk::ImageView _colorImageView{};
     void* _colorImageAllocation{ nullptr };
 
-    // The framebuffers will only be populated when a renderer is created,
-    // by which time the render pass is available
+    vk::RenderPass _renderPass{};
+
     std::vector<vk::Framebuffer> _framebuffers{};
 
-    void recreate(const vk::Device& device, const vk::RenderPass& renderPass);
+    void recreateSwapChain(const vk::Device& device);
+    void cleanupSwapChain(const vk::Device& device) const noexcept;
 
     friend class Engine;
     friend class Renderer;

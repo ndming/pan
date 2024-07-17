@@ -9,7 +9,7 @@
 class QueueFamilyFinder {
 public:
     [[nodiscard]] QueueFamilyFinder& requestPresentFamily(const vk::SurfaceKHR& surface);
-    [[nodiscard]] QueueFamilyFinder& requestComputeFamily(bool async = false);
+    [[nodiscard]] QueueFamilyFinder& requestComputeFamily();
 
     bool find(const vk::PhysicalDevice& candidate);
     [[nodiscard]] bool completed(bool relaxAsyncComputeRequest = false) const;
@@ -24,7 +24,6 @@ private:
     vk::SurfaceKHR _surface{};
     bool _findPresentFamily{ false };
 
-    bool _asyncCompute{ false };
     bool _findComputeFamily{ false };
 
     std::optional<uint32_t> _graphicsFamily{};

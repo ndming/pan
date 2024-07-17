@@ -7,8 +7,7 @@ QueueFamilyFinder& QueueFamilyFinder::requestPresentFamily(const vk::SurfaceKHR 
     return *this;
 }
 
-QueueFamilyFinder& QueueFamilyFinder::requestComputeFamily(const bool async) {
-    _asyncCompute = async;
+QueueFamilyFinder& QueueFamilyFinder::requestComputeFamily() {
     _findComputeFamily = true;
     return *this;
 }
@@ -31,7 +30,7 @@ bool QueueFamilyFinder::find(const vk::PhysicalDevice& candidate) {
         if (!_presentFamily.has_value() && _findPresentFamily && candidate.getSurfaceSupportKHR(i, _surface)) {
             _presentFamily = i;
         }
-        if (_findComputeFamily && _asyncCompute && queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute &&
+        if (_findComputeFamily && queueFamilies[i].queueFlags & vk::QueueFlagBits::eCompute &&
             !(queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics)) {
             // A dedicated compute family is a signal of support for async compute
             _computeFamily = i;
@@ -52,7 +51,7 @@ bool QueueFamilyFinder::completed(const bool relaxAsyncComputeRequest) const {
         completed = completed && _presentFamily.has_value();
     }
 
-    if (_findComputeFamily && _asyncCompute && !relaxAsyncComputeRequest) {
+    if (_findComputeFamily && !relaxAsyncComputeRequest) {
         completed = completed && _computeFamily.has_value();
     }
 
