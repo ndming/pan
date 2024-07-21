@@ -87,11 +87,7 @@ void Engine::destroy() const noexcept {
 
 
 /* Swap chain */
-std::unique_ptr<SwapChain> Engine::createSwapChain(
-    const std::unique_ptr<Context>& context,
-    const std::vector<DeviceFeature>& features,
-    const SwapChain::MSAA msaa
-) {
+std::unique_ptr<SwapChain> Engine::createSwapChain(const std::unique_ptr<Context>& context, const std::vector<DeviceFeature>& features) {
     // Have the swap chain create a surface and pick the physical device according to its need
     const auto deviceFeatures = Translator::toPhysicalDeviceFeatures(features);
     auto deviceExtensions = std::vector(mDeviceExtensions.begin(), mDeviceExtensions.end());
@@ -121,7 +117,7 @@ std::unique_ptr<SwapChain> Engine::createSwapChain(
         .build(_instance, swapChain->_physicalDevice, _device);
 
     // Now we can actually create a native Vulkan swap chain object
-    swapChain->initSwapChain(_device, mAllocator.get(), Translator::toSupportSampleCount(msaa, swapChain->_physicalDevice));
+    swapChain->initSwapChain(_device, mAllocator.get());
 
     return std::unique_ptr<SwapChain>(swapChain);
 }

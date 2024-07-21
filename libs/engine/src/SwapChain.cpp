@@ -9,7 +9,6 @@
 #include <plog/Log.h>
 
 #include <ranges>
-#include <set>
 
 
 SwapChain::SwapChain(
@@ -79,9 +78,8 @@ SwapChain::SwapChain(
     PLOG_INFO << "Found a suitable device: " << properties.deviceName.data();
 }
 
-void SwapChain::initSwapChain(const vk::Device& device, ResourceAllocator* const allocator, const vk::SampleCountFlagBits msaa) {
+void SwapChain::initSwapChain(const vk::Device& device, ResourceAllocator* const allocator) {
     _allocator = allocator;
-    _msaaSamples = msaa;
 
     createSwapChain(device);
     createImageViews(device);
@@ -164,47 +162,96 @@ void SwapChain::createColorResources(const vk::Device& device) {
 }
 
 void SwapChain::createRenderPass(const vk::Device& device) {
-    const auto colorAttachment = vk::AttachmentDescription{
-        {}, _imageFormat, _msaaSamples,
-        vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
-        vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
-        vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal };
-    const auto colorAttachmentResolve = vk::AttachmentDescription{
-        {}, _imageFormat, vk::SampleCountFlagBits::e1,
-        vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eStore,
-        vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
-        vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR };
+    if (_msaaSamples == vk::SampleCountFlagBits::e1) {
+        // When MSAA is disabled, we must not create a resolving attachment for the color attachment,
+        // thus we will treat this case separately
+        const auto colorAttachment = vk::AttachmentDescription{
+            {}, _imageFormat, _msaaSamples,
+            vk::AttachmentLoadOp::eClear,
+            vk::AttachmentStoreOp::eStore,
+            vk::AttachmentLoadOp::eDontCare,
+            vk::AttachmentStoreOp::eDontCare,
+            vk::ImageLayout::eUndefined,
+            vk::ImageLayout::ePresentSrcKHR,
+        };
 
-    static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
-    static constexpr auto colorAttachmentResolveRef = vk::AttachmentReference{ 1, vk::ImageLayout::eColorAttachmentOptimal };
+        static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
 
-    constexpr auto subpass = vk::SubpassDescription{
-        {}, vk::PipelineBindPoint::eGraphics, {}, {}, 1, &colorAttachmentRef, &colorAttachmentResolveRef };
+        constexpr auto subpass = vk::SubpassDescription{
+            {}, vk::PipelineBindPoint::eGraphics,
+            {}, {},
+            1, &colorAttachmentRef,
+        };
 
-    const auto attachments = std::array{ colorAttachment, colorAttachmentResolve };
+        constexpr auto dependency = vk::SubpassDependency{
+            vk::SubpassExternal,  // src subpass
+            0,                    // dst subpass
+            vk::PipelineStageFlagBits::eColorAttachmentOutput,  // src stage
+            vk::PipelineStageFlagBits::eColorAttachmentOutput,  // dst stage
+            {},                                         // src access
+            vk::AccessFlagBits::eColorAttachmentWrite,  // dst access
+        };
 
-    auto dependency = vk::SubpassDependency{};
-    // In subpass zero...
-    dependency.dstSubpass = 0;
-    // ... at these pipeline stages ...
-    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    // ... wait before performing these operations ...
-    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-    // ... until all operations of these types ...
-    dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-    // ... at these stages ...
-    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    // ... occuring in submission order prior to vkCmdBeginRenderPass have completed execution.
-    dependency.srcSubpass = vk::SubpassExternal;
+        const auto renderPassInfo = vk::RenderPassCreateInfo{ {}, 1, &colorAttachment, 1, &subpass, 1, &dependency };
+        _renderPass = device.createRenderPass(renderPassInfo);
+    } else {
+        const auto colorAttachment = vk::AttachmentDescription{
+            {}, _imageFormat, _msaaSamples,
+            vk::AttachmentLoadOp::eClear,   // clear the framebuffer to black before drawing a new frame
+            vk::AttachmentStoreOp::eStore,  // rendered contents will be stored in memory to be resolved later
+            vk::AttachmentLoadOp::eDontCare,
+            vk::AttachmentStoreOp::eDontCare,
+            vk::ImageLayout::eUndefined,
+            vk::ImageLayout::eColorAttachmentOptimal
+        };
+        const auto colorAttachmentResolve = vk::AttachmentDescription{
+            {}, _imageFormat, vk::SampleCountFlagBits::e1,
+            vk::AttachmentLoadOp::eDontCare,
+            vk::AttachmentStoreOp::eStore,    // resolved contents will be stored in memory to be presented later
+            vk::AttachmentLoadOp::eDontCare,
+            vk::AttachmentStoreOp::eDontCare,
+            vk::ImageLayout::eUndefined,
+            vk::ImageLayout::ePresentSrcKHR   // we want the image to be ready for presentation after rendering
+        };
 
-    const auto renderPassInfo = vk::RenderPassCreateInfo{
-        {}, static_cast<uint32_t>(attachments.size()), attachments.data(), 1, &subpass, 1, &dependency };
-    _renderPass = device.createRenderPass(renderPassInfo);
+        static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
+        // Instruct the render pass to resolve multisampled color image into regular attachment
+        static constexpr auto colorAttachmentResolveRef = vk::AttachmentReference{ 1, vk::ImageLayout::eColorAttachmentOptimal };
+
+        constexpr auto subpass = vk::SubpassDescription{
+            {}, vk::PipelineBindPoint::eGraphics,
+            {}, {},
+            1, &colorAttachmentRef,
+            &colorAttachmentResolveRef    // let the render pass define a multisample resolve operation
+        };
+
+        const auto attachments = std::array{ colorAttachment, colorAttachmentResolve };
+
+        auto dependency = vk::SubpassDependency{};
+        // In subpass zero...
+        dependency.dstSubpass = 0;
+        // ... at these pipeline stages ...
+        dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        // ... wait before performing these operations ...
+        dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+        // ... until all operations of these types ...
+        // (ensures that any write operations to the attachments are completed before subsequent ones begin)
+        dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+        // ... at these stages ...
+        dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        // ... occuring in submission order prior to vkCmdBeginRenderPass have completed execution.
+        dependency.srcSubpass = vk::SubpassExternal;
+
+        const auto renderPassInfo = vk::RenderPassCreateInfo{
+            {}, static_cast<uint32_t>(attachments.size()), attachments.data(), 1, &subpass, 1, &dependency };
+        _renderPass = device.createRenderPass(renderPassInfo);
+    }
 }
 
 void SwapChain::createFramebuffers(const vk::Device& device) {
     const auto toFramebuffer = [this, &device](const auto& swapChainImageView) {
-        const auto attachments = std::array{ _colorImageView, swapChainImageView };
+        const auto attachments = _msaaSamples == vk::SampleCountFlagBits::e1 ? std::vector{ swapChainImageView } :
+            std::vector{ _colorImageView, swapChainImageView };
         const auto framebufferInfo = vk::FramebufferCreateInfo{
             {}, _renderPass, static_cast<uint32_t>(attachments.size()), attachments.data(),
             _imageExtent.width, _imageExtent.height, 1 };
@@ -249,7 +296,7 @@ vk::Extent2D SwapChain::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capab
     return actualExtent;
 }
 
-void SwapChain::recreate(const vk::Device& device) {
+void SwapChain::recreate(const vk::Device& device, const vk::SampleCountFlagBits msaa) {
     // We won't recreate while the window is being minimized
     int width = 0, height = 0;
     glfwGetFramebufferSize(_window, &width, &height);
@@ -258,17 +305,19 @@ void SwapChain::recreate(const vk::Device& device) {
         glfwWaitEvents();
     }
     device.waitIdle();
-
     cleanup(device);
+
+    // Changing MSAA samples affect the render pass, color resources, and potentially the framebuffers
+    _msaaSamples = msaa;
 
     createSwapChain(device);
     createImageViews(device);
-
     createColorResources(device);
+    createRenderPass(device);
     createFramebuffers(device);
 }
 
-void SwapChain::cleanup(const vk::Device &device) const noexcept {
+void SwapChain::cleanup(const vk::Device& device) const noexcept {
     // Destroy all attachments
     device.destroyImageView(_colorImageView);
     _allocator->destroyImage(_colorImage, static_cast<VmaAllocation>(_colorImageAllocation));

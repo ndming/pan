@@ -32,7 +32,7 @@ private:
         const vk::PhysicalDeviceFeatures& features,
         const std::vector<const char*>& extensions);
 
-    void initSwapChain(const vk::Device& device, ResourceAllocator* allocator, vk::SampleCountFlagBits msaa);
+    void initSwapChain(const vk::Device& device, ResourceAllocator* allocator);
 
     void createSwapChain(const vk::Device& device);
     void createImageViews(const vk::Device& device);
@@ -47,7 +47,7 @@ private:
     [[nodiscard]] static PresentMode chooseSwapPresentMode(const std::vector<PresentMode>& availablePresentModes);
     [[nodiscard]] static vk::Extent2D chooseSwapExtent(const SurfaceCapabilities& capabilities, GLFWwindow* window);
 
-    void recreate(const vk::Device& device);
+    void recreate(const vk::Device& device, vk::SampleCountFlagBits msaa);
     void cleanup(const vk::Device& device) const noexcept;
 
     GLFWwindow* _window{ nullptr };
@@ -71,9 +71,16 @@ private:
     vk::ImageView _colorImageView{};
     void* _colorImageAllocation{ nullptr };
 
+    // To create framebuffers, we need to specify how many color and depth buffers there will be, how many samples to
+    // use for each of them and how their contents should be handled throughout the rendering operations. All of this
+    // information is wrapped in a render pass object.
     vk::RenderPass _renderPass{};
     vk::SampleCountFlagBits _msaaSamples{ vk::SampleCountFlagBits::e1 };
 
+    // The attachments specified during render pass creation are bound by wrapping them into a VkFramebuffer object.
+    // The image that we have to use for the attachment depends on which image the swap chain returns when we retrieve
+    // one for presentation. That means that we have to create a framebuffer for all of the images in the swap chain and
+    // use the one that corresponds to the retrieved image at drawing time
     std::vector<vk::Framebuffer> _framebuffers{};
 
     friend class Engine;

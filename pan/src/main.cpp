@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
         const auto engine = Engine::create();
 
         // Create a swap chain
-        const auto swapChain = engine->createSwapChain(context, {}, SwapChain::MSAA::x8);
+        const auto swapChain = engine->createSwapChain(context);
 
         // Destroy all resources
         engine->destroySwapChain(swapChain);

@@ -11,10 +11,7 @@ public:
     static std::unique_ptr<Engine> create();
     void destroy() const noexcept;
 
-    [[nodiscard]] std::unique_ptr<SwapChain> createSwapChain(
-        const std::unique_ptr<Context>& context,
-        const std::vector<DeviceFeature>& features = {},
-        SwapChain::MSAA msaa = SwapChain::MSAA::x1);
+    [[nodiscard]] std::unique_ptr<SwapChain> createSwapChain(const std::unique_ptr<Context>& context, const std::vector<DeviceFeature>& features = {});
     void destroySwapChain(const std::unique_ptr<SwapChain>& swapChain) const noexcept;
 
     // [[nodiscard]] Renderer* createRenderer(SwapChain* swapChain, Renderer::Pipeline pipeline) const;
