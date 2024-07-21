@@ -97,11 +97,16 @@ std::unique_ptr<SwapChain> Engine::createSwapChain(const std::unique_ptr<Context
     deviceExtensions.push_back(vk::KHRSwapchainExtensionName);   // to present to a surface
     const auto swapChain = new SwapChain{ context->_window, _instance, deviceFeatures, deviceExtensions };
 
-    // Create a logical device
+    // We need to have multiple VkDeviceQueueCreateInfo structs to create a queue from multiple families.
+    // An elegant way to do that is to create a set of all unique queue families that are necessary
+    // for the required queues
     auto uniqueFamilies = std::set{ swapChain->_graphicsFamily.value(), swapChain->_presentFamily.value() };
     if (swapChain->_computeFamily.has_value()) {
         uniqueFamilies.insert(swapChain->_computeFamily.value());
     }
+
+    // Set up a logical device to interface with the selected physical device. We can create multiple logical devices
+    // from the same physical device if we have varying requirements
     _device = DeviceBuilder()
         .queueFamilies(uniqueFamilies)
         .deviceFeatures(deviceFeatures)

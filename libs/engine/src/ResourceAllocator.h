@@ -30,6 +30,7 @@ public:
     void destroyImage(const vk::Image& image, VmaAllocation allocation) const noexcept;
 
     ~ResourceAllocator();
+
     ResourceAllocator(const ResourceAllocator&) = delete;
     ResourceAllocator& operator=(const ResourceAllocator&) = delete;
 

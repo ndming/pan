@@ -40,7 +40,7 @@ vk::Instance InstanceBuilder::build() const {
         _applicationName.data(), _applicationVersion, "None", _apiVersion, _apiVersion };
 
 #ifndef NDEBUG
-    // Check for layer support
+    // Check if all required validation layers are available, throw if any of them is not supported
     using namespace std::ranges;
     const auto properties = vk::enumerateInstanceLayerProperties();
 
@@ -53,11 +53,12 @@ vk::Instance InstanceBuilder::build() const {
     }
 #endif
 
-    // Instance create info
+    // Tell the Vulkan driver which global extensions and validation layers we want to use
+    // Global here means that they apply to the entire program and not a specific device
     auto createInfo = vk::InstanceCreateInfo{};
     createInfo.pApplicationInfo = &appInfo;
 
-    // Required extensions
+    // Vulkan is a platform-agnostic API, which means that we need an extension to interface with the window system
     uint32_t glfwExtensionCount{ 0 };
     const auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     auto requiredExtensions = std::vector(glfwExtensions, glfwExtensions + glfwExtensionCount);
@@ -67,6 +68,8 @@ vk::Instance InstanceBuilder::build() const {
 #endif
 
 #ifdef __APPLE__
+    // Beginning with the 1.3.216 Vulkan SDK, the VK_KHR_PORTABILITY_subset extension is mandatory
+    // for macOS with the latest MoltenVK SDK
     requiredExtensions.push_back(vk::KHRPortabilityEnumerationExtensionName);
     createInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 #endif
@@ -75,6 +78,7 @@ vk::Instance InstanceBuilder::build() const {
     createInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
 #ifndef NDEBUG
+    // Enable validation layers
     createInfo.enabledLayerCount = static_cast<uint32_t>(_layers.size());
     createInfo.ppEnabledLayerNames = _layers.data();
 
@@ -84,6 +88,8 @@ vk::Instance InstanceBuilder::build() const {
         MessageSeverity::eVerbose | MessageSeverity::eWarning | MessageSeverity::eError,
         MessageType::eGeneral | MessageType::eValidation | MessageType::ePerformance,
         _callback, nullptr };
+    // To have the debug messenger account for the creation and destruction of the Vulkan instance, pass the
+    // debug messenger to pNext to receive debugging messages for the creation and destruction of VkInstance
     createInfo.pNext = &debugCreateInfo;
 #else
     createInfo.enabledLayerCount = 0;

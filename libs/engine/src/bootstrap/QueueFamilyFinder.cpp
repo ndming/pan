@@ -25,8 +25,10 @@ bool QueueFamilyFinder::find(const vk::PhysicalDevice& candidate) {
             _graphicsFamily = i;
         }
 
-        // It's important that we only update the present family if we have not found one, otherwise,
-        // we may end up with a queue family that is suboptimal to use
+        // Although the Vulkan implementation may support window system integration, that does not mean that
+        // every device in the system supports it. Therefore we need to ensure that a device can present images
+        // to the surface we created. It's important that we only update the present family if we have not found one,
+        // otherwise, we may end up with a queue family that is suboptimal to use
         if (!_presentFamily.has_value() && _findPresentFamily && candidate.getSurfaceSupportKHR(i, _surface)) {
             _presentFamily = i;
         }

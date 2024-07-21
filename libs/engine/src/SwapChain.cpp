@@ -17,12 +17,15 @@ SwapChain::SwapChain(
     const vk::PhysicalDeviceFeatures& features,
     const std::vector<const char*>& extensions
 ) : _window{ window } {
-    // Create a surface
+    // Since Vulkan is a platform agnostic API, it can not interface directly with the window system on its own.
+    // To establish the connection between Vulkan and the window system to present results to the screen, we need
+    // to use the WSI (Window System Integration) extensions.
     if (glfwCreateWindowSurface(instance, window, nullptr, reinterpret_cast<VkSurfaceKHR*>(&_surface)) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create a window surface!");
     }
 
-    // Find a list of possible candidate devices based on requested features and extensions
+    // The window surface needs to be created right after the instance creation, because it can actually influence
+    // the physical device selection. Find a list of possible candidate devices:
     const auto candidates = PhysicalDeviceSelector()
         .extensions(extensions)
         .features(features)
@@ -97,7 +100,12 @@ void SwapChain::createSwapChain(const vk::Device &device) {
     const auto presentMode = chooseSwapPresentMode(presentModes);
     const auto extent = chooseSwapExtent(capabilities, _window);
 
+    // We have to decide how many images we would like to have in the swap chain. Simply sticking to the minimum
+    // means that we may sometimes have to wait on the driver to complete internal operations before we can acquire
+    // another image to render to. Therefore, it is recommended to request at least one more image than the minimum
     auto minImageCount = capabilities.minImageCount + 1;
+    // We should also make sure to not exceed the maximum number of images while doing this, where 0 is a special value
+    // that means that there is no maximum
     if (capabilities.maxImageCount > 0 && minImageCount > capabilities.maxImageCount) {
         minImageCount = capabilities.maxImageCount;
     }
@@ -109,21 +117,34 @@ void SwapChain::createSwapChain(const vk::Device &device) {
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = extent;
     createInfo.presentMode = presentMode;
-    createInfo.imageArrayLayers = 1;
+    createInfo.imageArrayLayers = 1;  // will always be 1 unless for a stereoscopic 3D application
     createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
     if (_graphicsFamily != _presentFamily) {
+        // Concurrent mode requires us to specify in advance between which queue families ownership will be shared
+        // using the queueFamilyIndexCount and pQueueFamilyIndices parameters
         const uint32_t queueFamilyIndices[]{ _graphicsFamily.value(), _presentFamily.value() };
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
         createInfo.queueFamilyIndexCount = 2;
         createInfo.pQueueFamilyIndices = queueFamilyIndices;
     } else {
+        // If the graphics queue family and presentation queue family are the same, which will be the case on most
+        // hardware, then we should stick to exclusive mode
         createInfo.imageSharingMode = vk::SharingMode::eExclusive;
         createInfo.queueFamilyIndexCount = 0;
         createInfo.pQueueFamilyIndices = nullptr;
     }
+    // Specify that a certain transform should be applied to images in the swap chain if it is supported
+    // (supportedTransforms in capabilities), like a 90 degree clockwise rotation or horizontal flip
+    // Use currentTransform to omit this
     createInfo.preTransform = capabilities.currentTransform;
+    // Specify if the alpha channel should be used for blending with other windows in the window system
+    // We’ll almost always want to simply ignore the alpha channel, hence VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR.
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+    // We don’t care about the color of pixels that are obscured, for example because another window is in front of them
     createInfo.clipped = vk::True;
+    // With Vulkan it’s possible that our swap chain becomes invalid or unoptimized while our application is running,
+    // for example because the window was resized. In that case the swap chain actually needs to be recreated from
+    // scratch and a reference to the old one must be specified in this field.
     createInfo.oldSwapchain = nullptr;
 
     _swapChain = device.createSwapchainKHR(createInfo);
@@ -163,8 +184,8 @@ void SwapChain::createColorResources(const vk::Device& device) {
 
 void SwapChain::createRenderPass(const vk::Device& device) {
     if (_msaaSamples == vk::SampleCountFlagBits::e1) {
-        // When MSAA is disabled, we must not create a resolving attachment for the color attachment,
-        // thus we will treat this case separately
+        // When MSAA is disabled, we are not allowed to create a resolving attachment for the color attachment,
+        // therefore, we will treat this case separately
         const auto colorAttachment = vk::AttachmentDescription{
             {}, _imageFormat, _msaaSamples,
             vk::AttachmentLoadOp::eClear,
@@ -250,28 +271,45 @@ void SwapChain::createRenderPass(const vk::Device& device) {
 
 void SwapChain::createFramebuffers(const vk::Device& device) {
     const auto toFramebuffer = [this, &device](const auto& swapChainImageView) {
+        // If MSAA is disabled, we use swap chain's images as color targets directly
         const auto attachments = _msaaSamples == vk::SampleCountFlagBits::e1 ? std::vector{ swapChainImageView } :
             std::vector{ _colorImageView, swapChainImageView };
         const auto framebufferInfo = vk::FramebufferCreateInfo{
-            {}, _renderPass, static_cast<uint32_t>(attachments.size()), attachments.data(),
-            _imageExtent.width, _imageExtent.height, 1 };
+            {}, _renderPass,
+            static_cast<uint32_t>(attachments.size()), attachments.data(),
+            _imageExtent.width, _imageExtent.height,
+            1  // Our swap chain images are single images, so the number of layers is 1
+        };
         return device.createFramebuffer(framebufferInfo);
     };
+    // The swap chain attachment differs for every swap chain image, but the same color and depth image can be used by
+    // all of them because only a single subpass is running at the same time due to our semaphores.
     const auto framebuffers = _imageViews | std::ranges::views::transform(toFramebuffer);
     _framebuffers = std::vector(framebuffers.begin(), framebuffers.end());
 }
 
 vk::SurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
+    // Each VkSurfaceFormatKHR entry contains a format and a colorSpace member. The format member specifies the
+    // color channels and types. For the color space we’ll use sRGB, which is pretty much the standard color space for
+    // viewing and printing purposes, like the textures we’ll use later on
     constexpr auto format = vk::Format::eB8G8R8A8Srgb;
+    // VK_FORMAT_B8G8R8A8_SRGB means that we store the B, G, R and alpha channels in that order with
+    // an 8 bit unsigned integer for a total of 32 bits per pixel. Because we're using sRGB, we should also use
+    // an sRGB color format, of which one of the most common ones is VK_FORMAT_B8G8R8A8_SRGB.
     constexpr auto colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
     const auto suitable = [](const auto& it){ return it.format == format && it.colorSpace == colorSpace; };
     if (const auto found = std::ranges::find_if(availableFormats, suitable); found != availableFormats.end()) {
         return *found;
     }
+    // If our checkingfails then we could start ranking the available formats based on how "good" they are, but in
+    // most cases it’s okay to just settle with the first format that is specified
     return availableFormats[0];
 }
 
 vk::PresentModeKHR SwapChain::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes) {
+    // MAILBOX is a very nice trade-off if energy usage is not a concern. It allows us to avoid tearing while still
+    // maintaining a fairly low latency by rendering new images that are as up-to-date as possible right until
+    // the vertical blank. On mobile devices, where energy usage is more important, FIFO is more preferable
     constexpr auto preferredMode = vk::PresentModeKHR::eMailbox;
     if (const auto found = std::ranges::find(availablePresentModes, preferredMode); found != availablePresentModes.end()) {
         return preferredMode;
@@ -280,10 +318,22 @@ vk::PresentModeKHR SwapChain::chooseSwapPresentMode(const std::vector<vk::Presen
 }
 
 vk::Extent2D SwapChain::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities, GLFWwindow* const window) {
+    // Vulkan tells us to match the resolution of the window set in the currentExtent member. However, some
+    // window managers do allow us to differ here and this is indicated by setting the width and height in
+    // currentExtent to a special value: the maximum value of uint32_t. In that case we’ll pick the resolution that
+    // best matches the window within the minImageExtent and maxImageExtent bounds
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     }
 
+    // GLFW uses two units when measuring sizes: pixels and screen coordinates. For example, the resolution
+    // {WIDTH, HEIGHT} that we specified when creating the window is measured in screen coordinates.
+    // But Vulkan works with pixels, so the swap chain extent must be specified in pixels as well. Unfortunately,
+    // if we are using a high DPI display (like Apple’s Retina display), screen coordinates don’t correspond to pixels.
+    // Instead, due to the higher pixel density, the resolution of the window in pixel will be larger than
+    // the resolution in screen coordinates. So if Vulkan doesn’t fix the swap extent for us, we can’t just use
+    // the original {WIDTH, HEIGHT}. Instead, we must use glfwGetFramebufferSize to query the resolution of the window
+    // in pixel before matching it against the minimum and maximum image extent.
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
 
@@ -304,6 +354,8 @@ void SwapChain::recreate(const vk::Device& device, const vk::SampleCountFlagBits
         glfwGetFramebufferSize(_window, &width, &height);
         glfwWaitEvents();
     }
+
+    // Before cleaning, we shouldn’t touch resources that may still be in use
     device.waitIdle();
     cleanup(device);
 
@@ -315,6 +367,12 @@ void SwapChain::recreate(const vk::Device& device, const vk::SampleCountFlagBits
     createColorResources(device);
     createRenderPass(device);
     createFramebuffers(device);
+
+    /* TODO: Make use of the oldSwapChain field
+     * The disadvantage of this approach is that we need to stop all rendering before creating the new swap chain.
+     * It is possible to create a new swap chain while drawing commands on an image from the old swap chain are still
+     * in-flight. We need to pass the previous swap chain to the oldSwapchain field in the VkSwapchainCreateInfoKHR
+     * struct and destroy the old swap chain as soon as we’ve finished using it */
 }
 
 void SwapChain::cleanup(const vk::Device& device) const noexcept {

@@ -20,8 +20,12 @@ std::vector<vk::PhysicalDevice> PhysicalDeviceSelector::select(
     const vk::SurfaceKHR& surface
 ) const {
     const auto suitable = [this, &surface](const auto& device) {
+        // Although the availability of a presentation queue implies that the swap chain extension must be supported,
+        // it’s still good to be explicit about things.
         const auto extensionSupported = checkExtensionSupport(device);
 
+        // Just checking if a swap chain is available is not sufficient, because it may not actually be compatible
+        // with our window surface.
         auto swapChainAdequate = false;
         if (extensionSupported) {
             const auto capabilities = device.getSurfaceCapabilitiesKHR(surface);
@@ -37,13 +41,13 @@ std::vector<vk::PhysicalDevice> PhysicalDeviceSelector::select(
 }
 
 bool PhysicalDeviceSelector::checkExtensionSupport(const vk::PhysicalDevice& device) const {
+    using namespace std::ranges;
     const auto availableExtensions = device.enumerateDeviceExtensionProperties();
     const auto toName = [](const vk::ExtensionProperties& extension) { return extension.extensionName.data(); };
-    const auto extensionNames = availableExtensions | std::ranges::views::transform(toName);
-    const auto extensions = std::unordered_set<std::string>(extensionNames.begin(), extensionNames.end());
+    const auto extensions = availableExtensions | views::transform(toName) | to<std::unordered_set<std::string>>();
 
     const auto available = [&extensions](const auto& it) { return extensions.contains(it); };
-    return std::ranges::all_of(_requiredExtensions, std::identity{}, available);
+    return all_of(_requiredExtensions, std::identity{}, available);
 }
 
 bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice& device) const {

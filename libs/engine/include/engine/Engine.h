@@ -25,9 +25,12 @@ public:
 private:
     Engine();
 
+    // The instance is the connection between our application and the Vulkan library
     vk::Instance _instance{};
 
 #ifndef NDEBUG
+    // The validation layers will print debug messages to the standard output by default,
+    // but we can also handle them ourselves by providing an explicit callback in our program
     vk::DebugUtilsMessengerEXT _debugMessenger{};
 #endif
 

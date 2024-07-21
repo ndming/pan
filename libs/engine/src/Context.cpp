@@ -8,7 +8,7 @@ std::unique_ptr<Context> Context::create(const std::string_view name, const int 
 }
 
 Context::Context(const std::string_view name, const int width, const int height) {
-    glfwInit(); glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwInit(); glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);  // don't create an OpenGL context
     _window = glfwCreateWindow(width, height, name.data(), nullptr, nullptr);
 }
 
