@@ -3,7 +3,10 @@
 #include "ResourceAllocator.h"
 #include "Translator.h"
 
+#ifndef NDEBUG
 #include "bootstrap/DebugMessenger.h"
+#endif
+
 #include "bootstrap/DeviceBuilder.h"
 #include "bootstrap/InstanceBuilder.h"
 
@@ -103,7 +106,9 @@ std::unique_ptr<SwapChain> Engine::createSwapChain(const std::unique_ptr<Context
         .queueFamilies(uniqueFamilies)
         .deviceFeatures(deviceFeatures)
         .deviceExtensions(deviceExtensions)
+#ifndef NDEBUG
         .validationLayers({ mValidationLayers.begin(), mValidationLayers.end() })
+#endif
         .build(swapChain->_physicalDevice);
 
     // We need a transfer queue for resource allocations. Any queue family with VK_QUEUE_GRAPHICS_BIT capabilities
