@@ -16,3 +16,10 @@ void Context::destroy() const noexcept {
     glfwDestroyWindow(_window);
     glfwTerminate();
 }
+
+void Context::loop(const std::function<void()> &onFrame) const {
+    while (!glfwWindowShouldClose(_window)) {
+        glfwPollEvents();
+        onFrame();
+    }
+}

@@ -22,6 +22,9 @@ int main(int argc, char* argv[]) {
         // Create a swap chain
         const auto swapChain = engine->createSwapChain(context);
 
+        // The render loop
+        context->loop([] {});
+
         // Destroy all resources
         engine->destroySwapChain(swapChain);
         engine->destroy();
