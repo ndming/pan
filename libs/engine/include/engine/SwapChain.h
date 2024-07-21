@@ -32,6 +32,24 @@ private:
         const vk::PhysicalDeviceFeatures& features,
         const std::vector<const char*>& extensions);
 
+    void initSwapChain(const vk::Device& device, ResourceAllocator* allocator, vk::SampleCountFlagBits msaa);
+
+    void createSwapChain(const vk::Device& device);
+    void createImageViews(const vk::Device& device);
+    void createColorResources(const vk::Device& device);
+    void createRenderPass(const vk::Device& device);
+    void createFramebuffers(const vk::Device& device);
+
+    using SurfaceFormat = vk::SurfaceFormatKHR;
+    using PresentMode = vk::PresentModeKHR;
+    using SurfaceCapabilities = vk::SurfaceCapabilitiesKHR;
+    [[nodiscard]] static SurfaceFormat chooseSwapSurfaceFormat(const std::vector<SurfaceFormat>& availableFormats);
+    [[nodiscard]] static PresentMode chooseSwapPresentMode(const std::vector<PresentMode>& availablePresentModes);
+    [[nodiscard]] static vk::Extent2D chooseSwapExtent(const SurfaceCapabilities& capabilities, GLFWwindow* window);
+
+    void recreate(const vk::Device& device);
+    void cleanup(const vk::Device& device) const noexcept;
+
     GLFWwindow* _window{ nullptr };
     vk::SurfaceKHR _surface{};
 
@@ -42,19 +60,11 @@ private:
 
     vk::SwapchainKHR _swapChain{};
     ResourceAllocator* _allocator{ nullptr };
-    void createSwapChain(const vk::Device& device, ResourceAllocator* allocator);
 
     std::vector<vk::Image> _images{};
     std::vector<vk::ImageView> _imageViews{};
     vk::Format _imageFormat{ vk::Format::eUndefined };
     vk::Extent2D _imageExtent{};
-
-    using SurfaceFormat = vk::SurfaceFormatKHR;
-    using PresentMode = vk::PresentModeKHR;
-    using SurfaceCapabilities = vk::SurfaceCapabilitiesKHR;
-    [[nodiscard]] static SurfaceFormat chooseSwapSurfaceFormat(const std::vector<SurfaceFormat>& availableFormats);
-    [[nodiscard]] static PresentMode chooseSwapPresentMode(const std::vector<PresentMode>& availablePresentModes);
-    [[nodiscard]] static vk::Extent2D chooseSwapExtent(const SurfaceCapabilities& capabilities, GLFWwindow* window);
 
     // Color attachment (render target)
     vk::Image _colorImage{};
@@ -62,13 +72,10 @@ private:
     void* _colorImageAllocation{ nullptr };
 
     vk::RenderPass _renderPass{};
+    vk::SampleCountFlagBits _msaaSamples{ vk::SampleCountFlagBits::e1 };
 
     std::vector<vk::Framebuffer> _framebuffers{};
 
-    void recreateSwapChain(const vk::Device& device);
-    void cleanupSwapChain(const vk::Device& device) const noexcept;
-
     friend class Engine;
     friend class Renderer;
-    friend class SwapChainBuilder;
 };

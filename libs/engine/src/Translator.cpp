@@ -39,91 +39,91 @@ vk::SampleCountFlagBits Translator::toSupportSampleCount(const SwapChain::MSAA m
 
 }
 
-vk::DescriptorSetLayout Translator::toDrawingDescriptorSetLayout(const Renderer::Pipeline pipeline, const vk::Device& device) {
-    using enum Renderer::Pipeline;
-    switch (pipeline) {
-    case Particle:
-    default:
-        return {};
-    }
-}
-
-vk::DescriptorSetLayout Translator::toComputeDescriptorSetLayout(const Renderer::Pipeline pipeline, const vk::Device& device) {
-    using enum Renderer::Pipeline;
-    switch (pipeline) {
-    case Particle: {
-        static constexpr auto computeLayoutBindings = std::array{
-            vk::DescriptorSetLayoutBinding{ 0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute },
-            vk::DescriptorSetLayoutBinding{ 1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute },
-        };
-        constexpr auto computeLayoutInfo = vk::DescriptorSetLayoutCreateInfo{
-                {}, static_cast<uint32_t>(computeLayoutBindings.size()), computeLayoutBindings.data() };
-        return device.createDescriptorSetLayout(computeLayoutInfo);
-    }
-    default:
-        return {};
-    }
-}
-
-vk::PipelineLayout Translator::toDrawingPipelineLayout(
-    const Renderer::Pipeline pipeline,
-    const vk::DescriptorSetLayout& layout,
-    const vk::Device &device
-) {
-    using enum Renderer::Pipeline;
-    switch (pipeline) {
-    case Particle:
-        return device.createPipelineLayout({});
-    default:
-        return {};
-    }
-}
-
-vk::PipelineLayout Translator::toComputePipelineLayout(
-    const Renderer::Pipeline pipeline,
-    const vk::DescriptorSetLayout& layout,
-    const vk::Device &device
-) {
-    using enum Renderer::Pipeline;
-    switch (pipeline) {
-    case Particle: {
-        constexpr auto pushConstantRange = vk::PushConstantRange{ vk::ShaderStageFlagBits::eCompute, 0, sizeof(ParticleParam) };
-        return device.createPipelineLayout({ {}, 1, &layout, 1, &pushConstantRange });
-    }
-    default:
-        return {};
-    }
-}
-
-vk::Pipeline Translator::toDrawingPipeline(
-    const Renderer::Pipeline pipeline,
-    const vk::PipelineLayout& layout,
-    const vk::RenderPass& renderPass,
-    const vk::SampleCountFlagBits msaaSamples,
-    const vk::Device& device
-) {
-    using enum Renderer::Pipeline;
-    switch (pipeline) {
-    case Particle:
-        return createParticleDrawingPipeline(layout, renderPass, msaaSamples, device);
-    default:
-        return {};
-    }
-}
-
-vk::Pipeline Translator::toComputePipeline(
-    const Renderer::Pipeline pipeline,
-    const vk::PipelineLayout& layout,
-    const vk::Device& device
-) {
-    using enum Renderer::Pipeline;
-    switch (pipeline) {
-    case Particle:
-        return createParticleComputePipeline(layout, device);
-    default:
-        return {};
-    }
-}
+// vk::DescriptorSetLayout Translator::toDrawingDescriptorSetLayout(const Renderer::Pipeline pipeline, const vk::Device& device) {
+//     using enum Renderer::Pipeline;
+//     switch (pipeline) {
+//     case Particle:
+//     default:
+//         return {};
+//     }
+// }
+//
+// vk::DescriptorSetLayout Translator::toComputeDescriptorSetLayout(const Renderer::Pipeline pipeline, const vk::Device& device) {
+//     using enum Renderer::Pipeline;
+//     switch (pipeline) {
+//     case Particle: {
+//         static constexpr auto computeLayoutBindings = std::array{
+//             vk::DescriptorSetLayoutBinding{ 0, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute },
+//             vk::DescriptorSetLayoutBinding{ 1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute },
+//         };
+//         constexpr auto computeLayoutInfo = vk::DescriptorSetLayoutCreateInfo{
+//                 {}, static_cast<uint32_t>(computeLayoutBindings.size()), computeLayoutBindings.data() };
+//         return device.createDescriptorSetLayout(computeLayoutInfo);
+//     }
+//     default:
+//         return {};
+//     }
+// }
+//
+// vk::PipelineLayout Translator::toDrawingPipelineLayout(
+//     const Renderer::Pipeline pipeline,
+//     const vk::DescriptorSetLayout& layout,
+//     const vk::Device &device
+// ) {
+//     using enum Renderer::Pipeline;
+//     switch (pipeline) {
+//     case Particle:
+//         return device.createPipelineLayout({});
+//     default:
+//         return {};
+//     }
+// }
+//
+// vk::PipelineLayout Translator::toComputePipelineLayout(
+//     const Renderer::Pipeline pipeline,
+//     const vk::DescriptorSetLayout& layout,
+//     const vk::Device &device
+// ) {
+//     using enum Renderer::Pipeline;
+//     switch (pipeline) {
+//     case Particle: {
+//         constexpr auto pushConstantRange = vk::PushConstantRange{ vk::ShaderStageFlagBits::eCompute, 0, sizeof(ParticleParam) };
+//         return device.createPipelineLayout({ {}, 1, &layout, 1, &pushConstantRange });
+//     }
+//     default:
+//         return {};
+//     }
+// }
+//
+// vk::Pipeline Translator::toDrawingPipeline(
+//     const Renderer::Pipeline pipeline,
+//     const vk::PipelineLayout& layout,
+//     const vk::RenderPass& renderPass,
+//     const vk::SampleCountFlagBits msaaSamples,
+//     const vk::Device& device
+// ) {
+//     using enum Renderer::Pipeline;
+//     switch (pipeline) {
+//     case Particle:
+//         return createParticleDrawingPipeline(layout, renderPass, msaaSamples, device);
+//     default:
+//         return {};
+//     }
+// }
+//
+// vk::Pipeline Translator::toComputePipeline(
+//     const Renderer::Pipeline pipeline,
+//     const vk::PipelineLayout& layout,
+//     const vk::Device& device
+// ) {
+//     using enum Renderer::Pipeline;
+//     switch (pipeline) {
+//     case Particle:
+//         return createParticleComputePipeline(layout, device);
+//     default:
+//         return {};
+//     }
+// }
 
 vk::SampleCountFlagBits Translator::getMaxUsableSampleCount(const vk::PhysicalDevice& device) {
     const auto physicalDeviceProperties = device.getProperties();

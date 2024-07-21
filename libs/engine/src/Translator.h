@@ -15,19 +15,19 @@ public:
     static vk::PhysicalDeviceFeatures toPhysicalDeviceFeatures(const std::vector<DeviceFeature>& features);
     static vk::SampleCountFlagBits toSupportSampleCount(SwapChain::MSAA msaa, const vk::PhysicalDevice& device);
 
-    static vk::DescriptorSetLayout toDrawingDescriptorSetLayout(Renderer::Pipeline pipeline, const vk::Device& device);
-    static vk::DescriptorSetLayout toComputeDescriptorSetLayout(Renderer::Pipeline pipeline, const vk::Device& device);
-
-    static vk::PipelineLayout toDrawingPipelineLayout(
-        Renderer::Pipeline pipeline, const vk::DescriptorSetLayout& layout, const vk::Device& device);
-    static vk::PipelineLayout toComputePipelineLayout(
-        Renderer::Pipeline pipeline, const vk::DescriptorSetLayout& layout, const vk::Device& device);
-
-    static vk::Pipeline toDrawingPipeline(
-        Renderer::Pipeline pipeline, const vk::PipelineLayout& layout, const vk::RenderPass& renderPass,
-        vk::SampleCountFlagBits msaaSamples, const vk::Device& device);
-    static vk::Pipeline toComputePipeline(
-        Renderer::Pipeline pipeline, const vk::PipelineLayout& layout, const vk::Device& device);
+    // static vk::DescriptorSetLayout toDrawingDescriptorSetLayout(Renderer::Pipeline pipeline, const vk::Device& device);
+    // static vk::DescriptorSetLayout toComputeDescriptorSetLayout(Renderer::Pipeline pipeline, const vk::Device& device);
+    //
+    // static vk::PipelineLayout toDrawingPipelineLayout(
+    //     Renderer::Pipeline pipeline, const vk::DescriptorSetLayout& layout, const vk::Device& device);
+    // static vk::PipelineLayout toComputePipelineLayout(
+    //     Renderer::Pipeline pipeline, const vk::DescriptorSetLayout& layout, const vk::Device& device);
+    //
+    // static vk::Pipeline toDrawingPipeline(
+    //     Renderer::Pipeline pipeline, const vk::PipelineLayout& layout, const vk::RenderPass& renderPass,
+    //     vk::SampleCountFlagBits msaaSamples, const vk::Device& device);
+    // static vk::Pipeline toComputePipeline(
+    //     Renderer::Pipeline pipeline, const vk::PipelineLayout& layout, const vk::Device& device);
 
 private:
     static vk::SampleCountFlagBits getMaxUsableSampleCount(const vk::PhysicalDevice& device);

@@ -10,11 +10,10 @@ set(SRCS
         src/SwapChain.cpp
         src/Translator.cpp
         src/bootstrap/DebugMessenger.cpp
+        src/bootstrap/DeviceBuilder.cpp
         src/bootstrap/InstanceBuilder.cpp
         src/bootstrap/PhysicalDeviceSelector.cpp
         src/bootstrap/QueueFamilyFinder.cpp
-        src/bootstrap/RenderPassBuilder.cpp
-        src/bootstrap/SwapChainBuilder.cpp
         src/external/VmaUsage.cpp
 )
 

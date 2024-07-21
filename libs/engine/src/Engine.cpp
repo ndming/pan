@@ -4,14 +4,12 @@
 #include "Translator.h"
 
 #include "bootstrap/DebugMessenger.h"
+#include "bootstrap/DeviceBuilder.h"
 #include "bootstrap/InstanceBuilder.h"
 
-#include <GLFW/glfw3.h>
 #include <plog/Log.h>
 
 #include <array>
-#include <numbers>
-#include <random>
 #include <ranges>
 #include <set>
 
@@ -89,7 +87,11 @@ void Engine::destroy() const noexcept {
 
 
 /* Swap chain */
-SwapChain* Engine::createSwapChain(const Context* const context, const std::vector<DeviceFeature>& features) {
+std::unique_ptr<SwapChain> Engine::createSwapChain(
+    const std::unique_ptr<Context>& context,
+    const std::vector<DeviceFeature>& features,
+    const SwapChain::MSAA msaa
+) {
     // Have the swap chain create a surface and pick the physical device according to its need
     const auto deviceFeatures = Translator::toPhysicalDeviceFeatures(features);
     auto deviceExtensions = std::vector(mDeviceExtensions.begin(), mDeviceExtensions.end());
@@ -101,27 +103,12 @@ SwapChain* Engine::createSwapChain(const Context* const context, const std::vect
     if (swapChain->_computeFamily.has_value()) {
         uniqueFamilies.insert(swapChain->_computeFamily.value());
     }
-
-    using namespace std::views;
-    constexpr auto priority = 1.0f;
-    const auto toQueueCreateInfo = [](const auto& family) { return vk::DeviceQueueCreateInfo{ {}, family, 1, &priority }; };
-    const auto queueCreateInfos = uniqueFamilies | transform(toQueueCreateInfo) | std::ranges::to<std::vector>();
-
-    auto deviceCreateInfo = vk::DeviceCreateInfo{};
-    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-    deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-#ifndef NDEBUG
-    deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(mValidationLayers.size());
-    deviceCreateInfo.ppEnabledLayerNames = mValidationLayers.data();
-#else
-    deviceCreateInfo.enabledLayerCount = 0;
-#endif
-
-    _device = swapChain->_physicalDevice.createDevice(deviceCreateInfo);
+    _device = DeviceBuilder()
+        .queueFamilies(uniqueFamilies)
+        .deviceFeatures(deviceFeatures)
+        .deviceExtensions(deviceExtensions)
+        .validationLayers({ mValidationLayers.begin(), mValidationLayers.end() })
+        .build(swapChain->_physicalDevice);
 
     // We need a transfer queue for resource allocations. Any queue family with VK_QUEUE_GRAPHICS_BIT capabilities
     // already implicitly support VK_QUEUE_TRANSFER_BIT operations.
@@ -134,15 +121,16 @@ SwapChain* Engine::createSwapChain(const Context* const context, const std::vect
         .build(_instance, swapChain->_physicalDevice, _device);
 
     // Now we can actually create a native Vulkan swap chain object
-    swapChain->createSwapChain(_device, mAllocator.get());
+    swapChain->initSwapChain(_device, mAllocator.get(), Translator::toSupportSampleCount(msaa, swapChain->_physicalDevice));
 
-    return swapChain;
+    return std::unique_ptr<SwapChain>(swapChain);
 }
 
-void Engine::destroySwapChain(const SwapChain* const swapChain) const noexcept {
-    swapChain->cleanupSwapChain(_device);
+void Engine::destroySwapChain(const std::unique_ptr<SwapChain>& swapChain) const noexcept {
+    _device.destroyRenderPass(swapChain->_renderPass);
+    swapChain->cleanup(_device);
     _instance.destroySurfaceKHR(swapChain->_surface);
-    delete swapChain;
+    mAllocator.reset(nullptr);
 }
 
 

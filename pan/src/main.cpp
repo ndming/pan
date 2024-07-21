@@ -4,6 +4,7 @@
 #include <plog/Formatters/TxtFormatter.h>
 
 #include <engine/Context.h>
+#include <engine/Engine.h>
 
 
 int main(int argc, char* argv[]) {
@@ -15,7 +16,15 @@ int main(int argc, char* argv[]) {
         // Create a window context
         const auto context = Context::create("pan");
 
+        // Create an engine
+        const auto engine = Engine::create();
+
+        // Create a swap chain
+        const auto swapChain = engine->createSwapChain(context, {}, SwapChain::MSAA::x8);
+
         // Destroy all resources
+        engine->destroySwapChain(swapChain);
+        engine->destroy();
         context->destroy();
     } catch (const std::exception& e) {
         PLOGE << e.what();

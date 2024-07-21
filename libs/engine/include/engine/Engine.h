@@ -1,10 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-
-#include <vulkan/vulkan.hpp>
-
 #include "engine/Context.h"
 #include "engine/DeviceFeature.h"
 #include "engine/Renderer.h"
@@ -16,11 +11,14 @@ public:
     static std::unique_ptr<Engine> create();
     void destroy() const noexcept;
 
-    [[nodiscard]] SwapChain* createSwapChain(const Context* context, const std::vector<DeviceFeature>& features = {});
-    void destroySwapChain(const SwapChain* swapChain) const noexcept;
+    [[nodiscard]] std::unique_ptr<SwapChain> createSwapChain(
+        const std::unique_ptr<Context>& context,
+        const std::vector<DeviceFeature>& features = {},
+        SwapChain::MSAA msaa = SwapChain::MSAA::x1);
+    void destroySwapChain(const std::unique_ptr<SwapChain>& swapChain) const noexcept;
 
-    [[nodiscard]] Renderer* createRenderer(SwapChain* swapChain, Renderer::Pipeline pipeline) const;
-    void destroyRenderer(const Renderer* renderer) const noexcept;
+    // [[nodiscard]] Renderer* createRenderer(SwapChain* swapChain, Renderer::Pipeline pipeline) const;
+    // void destroyRenderer(const Renderer* renderer) const noexcept;
 
     void flushAndWait() const;
 
