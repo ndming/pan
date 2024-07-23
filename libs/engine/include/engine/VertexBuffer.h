@@ -81,7 +81,15 @@ class VertexBuffer {
 public:
     class Builder {
     public:
-        explicit Builder(int vertexCount, int bindingCount);
+        explicit Builder(int bindingCount);
+
+        /**
+         * Specify the number of vertices for this vertex buffer.
+         *
+         * @param count The number of vertices, will be set for all bindings
+         * @return this Builder object for chaining calls.
+         */
+        Builder& vertexCount(int count);
 
         /**
          * Add a binding description to this vertex buffer.

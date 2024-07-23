@@ -47,7 +47,8 @@ int main(int argc, char* argv[]) {
         // Create a swap chain
         const auto swapChain = engine->createSwapChain();
 
-        const auto buffer = VertexBuffer::Builder(vertices.size(), 2)
+        const auto buffer = VertexBuffer::Builder(2)
+            .vertexCount(vertices.size())
             .binding(0, sizeof(glm::vec3))
             .binding(1, sizeof(glm::vec4))
             .attribute(0, 0, AttributeFormat::Vec3)

@@ -12,17 +12,21 @@
 #include <iostream>
 
 
-VertexBuffer::Builder::Builder(const int vertexCount, const int bindingCount)
-    : _vertexCount{ vertexCount }, _bindingCount{ bindingCount }  {
-    if (vertexCount <= 0) {
-        PLOGE << "Received non-positive vertex count: " << vertexCount;
-        throw std::invalid_argument("Vertex count is non-positive");
-    }
+VertexBuffer::Builder::Builder(const int bindingCount) : _bindingCount{ bindingCount }  {
     if (bindingCount <= 0) {
         PLOGE << "Received non-positive binding count: " << bindingCount;
         throw std::invalid_argument("Binding count is non-positive");
     }
     _bindings.resize(bindingCount);
+}
+
+VertexBuffer::Builder & VertexBuffer::Builder::vertexCount(const int count) {
+    if (count <= 0) {
+        PLOGE << "Received non-positive vertex count: " << count;
+        throw std::invalid_argument("Vertex count is non-positive");
+    }
+    _vertexCount = count;
+    return *this;
 }
 
 VertexBuffer::Builder& VertexBuffer::Builder::binding(const uint32_t binding, const uint32_t byteStride) {
