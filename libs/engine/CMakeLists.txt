@@ -7,16 +7,16 @@ set(SRCS
         src/Engine.cpp
         src/IndexBuffer.cpp
         src/Renderer.cpp
-        src/ResourceAllocator.cpp
         src/SwapChain.cpp
         src/Translator.cpp
         src/VertexBuffer.cpp
+        src/allocator/ResourceAllocator.cpp
+        src/allocator/VmaUsage.cpp
         src/bootstrap/DebugMessenger.cpp
         src/bootstrap/DeviceBuilder.cpp
         src/bootstrap/InstanceBuilder.cpp
         src/bootstrap/PhysicalDeviceSelector.cpp
         src/bootstrap/QueueFamilyFinder.cpp
-        src/external/VmaUsage.cpp
 )
 
 # Build a library
@@ -32,9 +32,9 @@ target_include_directories(${TARGET} PRIVATE src)
 
 # Dependencies
 target_link_libraries(${TARGET} PUBLIC plog::plog)
+target_link_libraries(${TARGET} PUBLIC glm::glm)
 target_link_libraries(${TARGET} PRIVATE glfw)
 target_link_libraries(${TARGET} PRIVATE ${Vulkan_LIBRARIES})
-target_link_libraries(${TARGET} PRIVATE glm::glm)
 
 # Find the GLSL compiler
 find_program(GLSL_COMPILER glslc HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)

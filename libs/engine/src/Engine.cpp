@@ -1,10 +1,6 @@
 #include "engine/Engine.h"
 
-#include "engine/Context.h"
-#include "engine/SwapChain.h"
-
-#include "ResourceAllocator.h"
-#include "Translator.h"
+#include "allocator/ResourceAllocator.h"
 
 #ifndef NDEBUG
 #include "bootstrap/DebugMessenger.h"
@@ -79,7 +75,7 @@ Engine::Engine(const std::unique_ptr<Context>& context, const std::vector<Featur
 #endif
 
     // Have the swap chain create a surface and pick the physical device according to its need
-    const auto deviceFeatures = Translator::toPhysicalDeviceFeatures(features);
+    const auto deviceFeatures = getPhysicalDeviceFeatures(features);
     auto deviceExtensions = std::vector(mDeviceExtensions.begin(), mDeviceExtensions.end());
     deviceExtensions.push_back(vk::KHRSwapchainExtensionName);   // to present to a surface
     _swapChain = std::unique_ptr<SwapChain>(new SwapChain{ context->_window, _instance, deviceFeatures, deviceExtensions });
@@ -115,6 +111,21 @@ Engine::Engine(const std::unique_ptr<Context>& context, const std::vector<Featur
         .flags(VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT)
         .vulkanApiVersion(VK_API_VERSION_1_2)
         .build(_instance, _swapChain->_physicalDevice, _device);
+}
+
+vk::PhysicalDeviceFeatures Engine::getPhysicalDeviceFeatures(const std::vector<Feature> &features) {
+    auto deviceFeatures = vk::PhysicalDeviceFeatures{};
+
+    for (const auto& feature : features) {
+        switch (feature) {
+            case Feature::SamplerAnisotropy:
+                deviceFeatures.samplerAnisotropy = vk::True; break;
+            case Feature::SampleRateShading:
+                deviceFeatures.sampleRateShading = vk::True; break;
+        }
+    }
+
+    return deviceFeatures;
 }
 
 void Engine::destroy() noexcept {

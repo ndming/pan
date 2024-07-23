@@ -3,21 +3,6 @@
 #include <plog/Log.h>
 
 
-vk::PhysicalDeviceFeatures Translator::toPhysicalDeviceFeatures(const std::vector<Engine::Feature>& features) {
-    auto deviceFeatures = vk::PhysicalDeviceFeatures{};
-
-    for (const auto& feature : features) {
-        switch (feature) {
-        case Engine::Feature::SamplerAnisotropy:
-            deviceFeatures.samplerAnisotropy = vk::True; break;
-        case Engine::Feature::SampleRateShading:
-            deviceFeatures.sampleRateShading = vk::True; break;
-        }
-    }
-
-    return deviceFeatures;
-}
-
 vk::SampleCountFlagBits Translator::toSupportSampleCount(const SwapChain::MSAA msaa, const vk::PhysicalDevice& device) {
     const auto maxSampleCount = getMaxUsableSampleCount(device);
     if (static_cast<int>(toSampleCount(msaa)) <= static_cast<int>(maxSampleCount)) {

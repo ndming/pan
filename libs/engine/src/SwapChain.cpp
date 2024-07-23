@@ -3,7 +3,7 @@
 #include "bootstrap/PhysicalDeviceSelector.h"
 #include "bootstrap/QueueFamilyFinder.h"
 
-#include "ResourceAllocator.h"
+#include "allocator/ResourceAllocator.h"
 
 #include <GLFW/glfw3.h>
 #include <plog/Log.h>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "external/VmaUsage.h"
+#include "VmaUsage.h"
 
 #include <vulkan/vulkan.hpp>
 

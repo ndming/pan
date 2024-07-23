@@ -36,6 +36,7 @@ public:
 
 private:
     Engine(const std::unique_ptr<Context>& context, const std::vector<Feature>& features);
+    static vk::PhysicalDeviceFeatures getPhysicalDeviceFeatures(const std::vector<Feature>& features);
 
     [[nodiscard]] vk::CommandBuffer beginSingleTimeTransferCommands() const;
     void endSingleTimeTransferCommands(const vk::CommandBuffer &commandBuffer) const;
