@@ -6,6 +6,31 @@
 #include <engine/Context.h>
 #include <engine/Engine.h>
 
+#include <glm/glm.hpp>
+
+
+struct Vertex {
+    glm::vec3 position;
+    glm::vec4 color;
+};
+
+static constexpr auto vertices = std::array{
+    Vertex{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } },
+    Vertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f } },
+    Vertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 0.0f } },
+};
+
+static constexpr auto positions = std::array{
+    glm::vec3{ -0.5f, -0.5f, 0.0f },
+    glm::vec3{ -0.5f, -0.5f, 0.0f },
+    glm::vec3{ -0.5f, -0.5f, 0.0f },
+};
+
+static constexpr auto colors = std::array{
+    glm::vec4{ 1.0f, 0.0f, 0.0f, 0.0f },
+    glm::vec4{ 0.0f, 1.0f, 0.0f, 0.0f },
+    glm::vec4{ 0.0f, 0.0f, 1.0f, 0.0f },
+};
 
 int main(int argc, char* argv[]) {
     // Plant a console logger
@@ -22,11 +47,15 @@ int main(int argc, char* argv[]) {
         // Create a swap chain
         const auto swapChain = engine->createSwapChain();
 
-        const auto buffer = VertexBuffer::Builder(3, 1)
-            .binding(0, 4 * 3 + 4 * 4)
-            .attribute(0, 0, AttributeFormat::Vec3, 0)
-            .attribute(0, 1, AttributeFormat::Vec4, 4 * 3)
+        const auto buffer = VertexBuffer::Builder(vertices.size(), 2)
+            .binding(0, sizeof(glm::vec3))
+            .binding(1, sizeof(glm::vec4))
+            .attribute(0, 0, AttributeFormat::Vec3)
+            .attribute(1, 1, AttributeFormat::Vec4)
             .build(*engine);
+
+        buffer->setBindingData(0, positions.data(), *engine);
+        buffer->setBindingData(1, colors.data(), *engine);
 
         // The render loop
         context->loop([] {});

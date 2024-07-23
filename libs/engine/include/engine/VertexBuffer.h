@@ -129,14 +129,15 @@ private:
         std::vector<Binding>&& bindings,
         std::vector<Attribute>&& attributes,
         std::vector<vk::DeviceSize>&& offsets,
-        std::size_t bufferSize) noexcept;
+        int vertexCount) noexcept;
 
     std::vector<Binding> _bindingDescriptions;
     std::vector<Attribute> _attributeDescriptions;
     std::vector<vk::DeviceSize> _offsets;
 
+    int _vertexCount;
+
     vk::Buffer _buffer{};
-    std::size_t _bufferSize;
     void* allocation{ nullptr };
 
     // The Engine needs access to the vk::Buffer and allocation when destroying the buffer
