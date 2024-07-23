@@ -7,14 +7,14 @@ std::unique_ptr<Context> Context::create(const std::string_view name, const int 
     return std::unique_ptr<Context>{ new Context(name, width, height) };
 }
 
+Context::~Context() {
+    glfwDestroyWindow(_window);
+    glfwTerminate();
+}
+
 Context::Context(const std::string_view name, const int width, const int height) {
     glfwInit(); glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);  // don't create an OpenGL context
     _window = glfwCreateWindow(width, height, name.data(), nullptr, nullptr);
-}
-
-void Context::destroy() const noexcept {
-    glfwDestroyWindow(_window);
-    glfwTerminate();
 }
 
 void Context::loop(const std::function<void()> &onFrame) const {

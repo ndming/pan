@@ -65,8 +65,8 @@ private:
     // of images with the refresh rate of the screen
     vk::SwapchainKHR _swapChain{};
 
-    // Store a pointer to our allocator since we will be destroying and recreating resources
-    // throughout the swap chain life time
+    // Store a pointer to our allocator since we will be destroying and recreating resources throughout the swap chain
+    // life time. Since the SwapChain (should) never outlives the Engine, this approach is acceptable.
     ResourceAllocator* _allocator{ nullptr };
 
     std::vector<vk::Image> _images{};
@@ -91,6 +91,9 @@ private:
     // use the one that corresponds to the retrieved image at drawing time
     std::vector<vk::Framebuffer> _framebuffers{};
 
+    // The Engine needs access to the constructor when creating SwapChain
     friend class Engine;
+
+    // The Renderer will be instructing the SwapChain to acquire and present images
     friend class Renderer;
 };

@@ -1,11 +1,10 @@
 #pragma once
 
-#include <cstdint>
-#include <memory>
+#include "external/VmaUsage.h"
 
 #include <vulkan/vulkan.hpp>
 
-#include "external/VmaUsage.h"
+#include <cstdint>
 
 
 class ResourceAllocator {
@@ -15,7 +14,7 @@ public:
         Builder& flags(VmaAllocatorCreateFlags flags);
         Builder& vulkanApiVersion(uint32_t apiVersion);
 
-        [[nodiscard]] std::unique_ptr<ResourceAllocator> build(
+        [[nodiscard]] ResourceAllocator* build(
             const vk::Instance& instance, const vk::PhysicalDevice& physicalDevice, const vk::Device& device) const;
 
     private:
@@ -23,11 +22,18 @@ public:
         uint32_t _apiVersion{};
     };
 
-    vk::Image createColorAttachmentImage(
+    vk::Image allocateColorAttachmentImage(
         uint32_t width, uint32_t height, uint32_t mipLevels, vk::SampleCountFlagBits sampleCount,
         vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, VmaAllocation* allocation) const;
 
     void destroyImage(const vk::Image& image, VmaAllocation allocation) const noexcept;
+
+    vk::Buffer allocateDeviceBuffer(std::size_t bufferSize, VkBufferUsageFlags usage, VmaAllocation* allocation) const;
+    vk::Buffer allocateStagingBuffer(std::size_t bufferSize, VmaAllocation* allocation) const;
+
+    void destroyBuffer(const vk::Buffer& buffer, VmaAllocation allocation) const noexcept;
+
+    void mapData(std::size_t bufferSize, const void* data, VmaAllocation allocation) const;
 
     ~ResourceAllocator();
 
@@ -38,6 +44,4 @@ private:
     explicit ResourceAllocator(VmaAllocator allocator) : _allocator{ allocator } {}
 
     VmaAllocator _allocator{};
-
-    friend class Engine;
 };

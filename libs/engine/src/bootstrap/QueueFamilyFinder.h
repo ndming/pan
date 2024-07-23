@@ -1,9 +1,9 @@
 #pragma once
 
+#include <vulkan/vulkan.hpp>
+
 #include <cstdint>
 #include <optional>
-
-#include <vulkan/vulkan.hpp>
 
 
 class QueueFamilyFinder {

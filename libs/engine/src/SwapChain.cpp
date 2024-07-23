@@ -172,7 +172,7 @@ void SwapChain::createColorResources(const vk::Device& device) {
     constexpr auto aspectFlags = vk::ImageAspectFlagBits::eColor;
 
     auto allocation = VmaAllocation{};
-    _colorImage = _allocator->createColorAttachmentImage(
+    _colorImage = _allocator->allocateColorAttachmentImage(
         _imageExtent.width, _imageExtent.height, mipLevels, _msaaSamples, _imageFormat,
         vk::ImageTiling::eOptimal, Usage::eTransientAttachment | Usage::eColorAttachment, &allocation);
     _colorImageAllocation = allocation;

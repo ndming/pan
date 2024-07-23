@@ -13,7 +13,7 @@ ResourceAllocator::Builder& ResourceAllocator::Builder::vulkanApiVersion(const u
     return *this;
 }
 
-std::unique_ptr<ResourceAllocator> ResourceAllocator::Builder::build(
+ResourceAllocator* ResourceAllocator::Builder::build(
     const vk::Instance &instance,
     const vk::PhysicalDevice &physicalDevice,
     const vk::Device &device
@@ -33,10 +33,10 @@ std::unique_ptr<ResourceAllocator> ResourceAllocator::Builder::build(
     auto allocator = VmaAllocator{};
     vmaCreateAllocator(&allocatorCreateInfo, &allocator);
 
-    return std::unique_ptr<ResourceAllocator>(new ResourceAllocator{ allocator });
+    return new ResourceAllocator{ allocator };
 }
 
-vk::Image ResourceAllocator::createColorAttachmentImage(
+vk::Image ResourceAllocator::allocateColorAttachmentImage(
     const uint32_t width,
     const uint32_t height,
     const uint32_t mipLevels,
@@ -70,6 +70,53 @@ vk::Image ResourceAllocator::createColorAttachmentImage(
 
 void ResourceAllocator::destroyImage(const vk::Image& image, VmaAllocation allocation) const noexcept {
     vmaDestroyImage(_allocator, image, allocation);
+}
+
+vk::Buffer ResourceAllocator::allocateDeviceBuffer(const std::size_t bufferSize, const VkBufferUsageFlags usage, VmaAllocation* allocation) const {
+    auto bufferCreateInfo = VkBufferCreateInfo{};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.usage = usage;
+    bufferCreateInfo.size = bufferSize;
+
+    auto allocInfo = VmaAllocationCreateInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+    allocInfo.priority = 1.0f;
+
+    auto buffer = VkBuffer{};
+    vmaCreateBuffer(_allocator, &bufferCreateInfo, &allocInfo, &buffer, allocation, nullptr);
+
+    return buffer;
+}
+
+vk::Buffer ResourceAllocator::allocateStagingBuffer(const std::size_t bufferSize, VmaAllocation* allocation) const {
+    auto bufferCreateInfo = VkBufferCreateInfo{};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bufferCreateInfo.size = bufferSize;
+
+    auto allocCreateInfo = VmaAllocationCreateInfo{};
+    allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    allocCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+
+    auto buffer = VkBuffer{};
+    if (vmaCreateBuffer(_allocator, &bufferCreateInfo, &allocCreateInfo, &buffer, allocation, nullptr) != VK_SUCCESS) {
+        PLOG_ERROR << "Could not create staging buffer";
+        throw std::runtime_error("Failed to create staging buffer");
+    }
+
+    return buffer;
+}
+
+void ResourceAllocator::destroyBuffer(const vk::Buffer& buffer, VmaAllocation allocation) const noexcept {
+    vmaDestroyBuffer(_allocator, buffer, allocation);
+}
+
+void ResourceAllocator::mapData(const std::size_t bufferSize, const void* const data, VmaAllocation allocation) const {
+    void* mappedData;
+    vmaMapMemory(_allocator, allocation, &mappedData);
+    memcpy(mappedData, data, bufferSize);
+    vmaUnmapMemory(_allocator, allocation);
 }
 
 ResourceAllocator::~ResourceAllocator() {

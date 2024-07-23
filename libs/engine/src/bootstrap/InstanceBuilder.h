@@ -1,9 +1,9 @@
 #pragma once
 
+#include <vulkan/vulkan.hpp>
+
 #include <cstdint>
 #include <string>
-
-#include <vulkan/vulkan.hpp>
 
 
 class InstanceBuilder {

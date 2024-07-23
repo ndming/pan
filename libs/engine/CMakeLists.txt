@@ -9,6 +9,7 @@ set(SRCS
         src/ResourceAllocator.cpp
         src/SwapChain.cpp
         src/Translator.cpp
+        src/VertexBuffer.cpp
         src/bootstrap/DebugMessenger.cpp
         src/bootstrap/DeviceBuilder.cpp
         src/bootstrap/InstanceBuilder.cpp

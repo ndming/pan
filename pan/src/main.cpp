@@ -17,18 +17,28 @@ int main(int argc, char* argv[]) {
         const auto context = Context::create("pan");
 
         // Create an engine
-        const auto engine = Engine::create();
+        const auto engine = Engine::create(context);
 
         // Create a swap chain
-        const auto swapChain = engine->createSwapChain(context);
+        const auto swapChain = engine->createSwapChain();
+
+        const auto buffer = VertexBuffer::Builder(3, 1)
+            .binding(0, 4 * 3 + 4 * 4)
+            .attribute(0, 0, AttributeFormat::Vec3, 0)
+            .attribute(0, 1, AttributeFormat::Vec4, 4 * 3)
+            .build(*engine);
 
         // The render loop
         context->loop([] {});
 
+        // When we exit the loop, drawing and presentation operations may still be going on.
+        // Cleaning up resources while that is happening is a bad idea.
+        engine->waitIdle();
+
         // Destroy all resources
+        engine->destroyVertexBuffer(buffer);
         engine->destroySwapChain(swapChain);
         engine->destroy();
-        context->destroy();
     } catch (const std::exception& e) {
         PLOGE << e.what();
         return EXIT_FAILURE;
