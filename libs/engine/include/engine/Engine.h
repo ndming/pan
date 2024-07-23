@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/Context.h"
+#include "engine/IndexBuffer.h"
 #include "engine/SwapChain.h"
 #include "engine/VertexBuffer.h"
 
@@ -26,6 +27,7 @@ public:
     // void destroyRenderer(const Renderer* renderer) const noexcept;
 
     void destroyVertexBuffer(VertexBuffer* buffer) const noexcept;
+    void destroyIndexBuffer(IndexBuffer* buffer) const noexcept;
 
     void waitIdle() const;
 
@@ -67,4 +69,5 @@ private:
 
     // The buffers need access to the createDeviceBuffer method
     friend class VertexBuffer;
+    friend class IndexBuffer;
 };

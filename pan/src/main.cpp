@@ -32,6 +32,8 @@ static constexpr auto colors = std::array{
     glm::vec4{ 0.0f, 0.0f, 1.0f, 0.0f },
 };
 
+static constexpr auto indices = std::array<uint16_t, 3>{ 0, 1, 2 };
+
 int main(int argc, char* argv[]) {
     // Plant a console logger
     auto appender = plog::ColorConsoleAppender<plog::TxtFormatter>();
@@ -47,16 +49,21 @@ int main(int argc, char* argv[]) {
         // Create a swap chain
         const auto swapChain = engine->createSwapChain();
 
-        const auto buffer = VertexBuffer::Builder(2)
+        const auto vertexBuffer = VertexBuffer::Builder(2)
             .vertexCount(vertices.size())
             .binding(0, sizeof(glm::vec3))
             .binding(1, sizeof(glm::vec4))
             .attribute(0, 0, AttributeFormat::Vec3)
             .attribute(1, 1, AttributeFormat::Vec4)
             .build(*engine);
+        vertexBuffer->setBindingData(0, positions.data(), *engine);
+        vertexBuffer->setBindingData(1, colors.data(), *engine);
 
-        buffer->setBindingData(0, positions.data(), *engine);
-        buffer->setBindingData(1, colors.data(), *engine);
+        const auto indexBuffer = IndexBuffer::Builder()
+            .indexCount(indices.size())
+            .indexType(IndexType::Uint16)
+            .build(*engine);
+        indexBuffer->setData(indices.data(), *engine);
 
         // The render loop
         context->loop([] {});
@@ -66,7 +73,8 @@ int main(int argc, char* argv[]) {
         engine->waitIdle();
 
         // Destroy all resources
-        engine->destroyVertexBuffer(buffer);
+        engine->destroyIndexBuffer(indexBuffer);
+        engine->destroyVertexBuffer(vertexBuffer);
         engine->destroySwapChain(swapChain);
         engine->destroy();
     } catch (const std::exception& e) {

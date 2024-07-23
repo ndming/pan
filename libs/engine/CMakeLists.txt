@@ -5,6 +5,7 @@ set(TARGET engine)
 set(SRCS
         src/Context.cpp
         src/Engine.cpp
+        src/IndexBuffer.cpp
         src/Renderer.cpp
         src/ResourceAllocator.cpp
         src/SwapChain.cpp

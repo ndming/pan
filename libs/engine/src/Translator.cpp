@@ -18,26 +18,6 @@ vk::PhysicalDeviceFeatures Translator::toPhysicalDeviceFeatures(const std::vecto
     return deviceFeatures;
 }
 
-vk::Format Translator::toFormat(const AttributeFormat format) {
-    using enum AttributeFormat;
-    switch (format) {
-        case Float:  return vk::Format::eR32Sfloat;
-        case Vec2:   return vk::Format::eR32G32Sfloat;
-        case Vec3:   return vk::Format::eR32G32B32Sfloat;
-        case Vec4:   return vk::Format::eR32G32B32A32Sfloat;
-        case Uint:   return vk::Format::eR32Uint;
-        case Uvec2:  return vk::Format::eR32G32Uint;
-        case Uvec3:  return vk::Format::eR32G32B32Uint;
-        case Uvec4:  return vk::Format::eR32G32B32A32Uint;
-        case Int:    return vk::Format::eR32Sint;
-        case Ivec2:  return vk::Format::eR32G32Sint;
-        case Ivec3:  return vk::Format::eR32G32B32Sint;
-        case Ivec4:  return vk::Format::eR32G32B32A32Sint;
-        case Double: return vk::Format::eR64Sfloat;
-        default:     return vk::Format::eUndefined;
-    }
-}
-
 vk::SampleCountFlagBits Translator::toSupportSampleCount(const SwapChain::MSAA msaa, const vk::PhysicalDevice& device) {
     const auto maxSampleCount = getMaxUsableSampleCount(device);
     if (static_cast<int>(toSampleCount(msaa)) <= static_cast<int>(maxSampleCount)) {

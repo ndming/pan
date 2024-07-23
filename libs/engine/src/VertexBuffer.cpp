@@ -45,8 +45,28 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(
     const AttributeFormat format,
     const uint32_t byteOffset
 ) {
-    _attributes.emplace_back(location, binding, Translator::toFormat(format), byteOffset);
+    _attributes.emplace_back(location, binding, getFormat(format), byteOffset);
     return *this;
+}
+
+vk::Format VertexBuffer::Builder::getFormat(const AttributeFormat format) {
+    using enum AttributeFormat;
+    switch (format) {
+        case Float:  return vk::Format::eR32Sfloat;
+        case Vec2:   return vk::Format::eR32G32Sfloat;
+        case Vec3:   return vk::Format::eR32G32B32Sfloat;
+        case Vec4:   return vk::Format::eR32G32B32A32Sfloat;
+        case Uint:   return vk::Format::eR32Uint;
+        case Uvec2:  return vk::Format::eR32G32Uint;
+        case Uvec3:  return vk::Format::eR32G32B32Uint;
+        case Uvec4:  return vk::Format::eR32G32B32A32Uint;
+        case Int:    return vk::Format::eR32Sint;
+        case Ivec2:  return vk::Format::eR32G32Sint;
+        case Ivec3:  return vk::Format::eR32G32B32Sint;
+        case Ivec4:  return vk::Format::eR32G32B32A32Sint;
+        case Double: return vk::Format::eR64Sfloat;
+        default:     return vk::Format::eUndefined;
+    }
 }
 
 VertexBuffer* VertexBuffer::Builder::build(const Engine& engine) {
@@ -70,10 +90,6 @@ VertexBuffer* VertexBuffer::Builder::build(const Engine& engine) {
     return buffer;
 }
 
-void VertexBuffer::setBindingData(const uint32_t binding, const void* const data, const Engine& engine) const {
-    engine.transferBufferData(_vertexCount * _bindingDescriptions[binding].stride, data, _buffer, _offsets[binding]);
-}
-
 VertexBuffer::VertexBuffer(
     std::vector<Binding>&& bindings,
     std::vector<Attribute>&& attributes,
@@ -81,4 +97,8 @@ VertexBuffer::VertexBuffer(
     const int vertexCount) noexcept
 : _bindingDescriptions{ std::move(bindings) }, _attributeDescriptions{ attributes },
   _offsets{ std::move(offsets) }, _vertexCount{ vertexCount } {
+}
+
+void VertexBuffer::setBindingData(const uint32_t binding, const void* const data, const Engine& engine) const {
+    engine.transferBufferData(_vertexCount * _bindingDescriptions[binding].stride, data, _buffer, _offsets[binding]);
 }

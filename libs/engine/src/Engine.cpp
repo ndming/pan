@@ -186,6 +186,12 @@ void Engine::destroyVertexBuffer(VertexBuffer* const buffer) const noexcept {
     delete buffer;
 }
 
+void Engine::destroyIndexBuffer(IndexBuffer *buffer) const noexcept {
+    _allocator->destroyBuffer(buffer->_buffer, static_cast<VmaAllocation>(buffer->allocation));
+    buffer->allocation = nullptr;  // a bit redundant, but this prevents the IDE from suggesting making pointer to const
+    delete buffer;
+}
+
 void Engine::waitIdle() const {
     _device.waitIdle();
 }

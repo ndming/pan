@@ -118,6 +118,8 @@ public:
         [[nodiscard]] VertexBuffer* build(const Engine& engine);
 
     private:
+        static vk::Format getFormat(AttributeFormat format);
+
         std::vector<vk::VertexInputAttributeDescription> _attributes{};
         int _vertexCount{ 0 };
 
