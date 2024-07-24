@@ -9,7 +9,7 @@
 
 class ResourceAllocator;
 
-class Engine {
+class Engine final {
 public:
     enum class Feature {
         SamplerAnisotropy,

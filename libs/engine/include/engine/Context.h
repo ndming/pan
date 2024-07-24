@@ -8,7 +8,7 @@
 struct GLFWwindow;
 using Surface = GLFWwindow;
 
-class Context {
+class Context final {
 public:
     static std::unique_ptr<Context> create(std::string_view name, int width = 1280, int height = 768);
     void destroy() const noexcept;

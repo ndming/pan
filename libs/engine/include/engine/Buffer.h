@@ -13,6 +13,8 @@ public:
     Buffer(const Buffer&) = delete;
     Buffer& operator=(const Buffer&) = delete;
 
+    virtual ~Buffer() = default;
+
 protected:
     Buffer(std::size_t bufferSize, vk::BufferUsageFlags usage, const Engine& engine);
 

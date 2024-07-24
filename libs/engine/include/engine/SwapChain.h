@@ -10,7 +10,7 @@
 struct GLFWwindow;
 class ResourceAllocator;
 
-class SwapChain {
+class SwapChain final {
 public:
     enum class MSAA {
         x1,
