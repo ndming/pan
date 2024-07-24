@@ -6,11 +6,14 @@
 
 
 struct GLFWwindow;
+using Surface = GLFWwindow;
 
 class Context {
 public:
     static std::unique_ptr<Context> create(std::string_view name, int width = 1280, int height = 768);
-    ~Context();
+    void destroy() const noexcept;
+
+    [[nodiscard]] Surface* getSurface() const;
 
     void loop(const std::function<void()>& onFrame) const;
 
@@ -21,7 +24,4 @@ private:
     Context(std::string_view name, int width, int height);
 
     GLFWwindow* _window{ nullptr };
-
-    // The Engine needs access to the _window member when creating a SwapChain
-    friend class Engine;
 };

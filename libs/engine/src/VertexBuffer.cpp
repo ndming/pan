@@ -1,15 +1,11 @@
 #include "engine/VertexBuffer.h"
-
-#include "Translator.h"
+#include "engine/Engine.h"
 
 #include <plog/Log.h>
-#include <vulkan/vulkan.hpp>
 
-#include <algorithm>
 #include <format>
+#include <ranges>
 #include <stdexcept>
-
-#include <iostream>
 
 
 VertexBuffer::Builder::Builder(const int bindingCount) : _bindingCount{ bindingCount }  {
@@ -69,7 +65,7 @@ vk::Format VertexBuffer::Builder::getFormat(const AttributeFormat format) {
     }
 }
 
-VertexBuffer* VertexBuffer::Builder::build(const Engine& engine) {
+std::shared_ptr<VertexBuffer> VertexBuffer::Builder::build(const Engine& engine) {
     // Calculate the offsets for each binding
     auto offsets = std::vector<vk::DeviceSize>(_bindingCount);
     offsets[0] = vk::DeviceSize{ 0 };
@@ -79,26 +75,34 @@ VertexBuffer* VertexBuffer::Builder::build(const Engine& engine) {
 
     // Calculate the buffer total size and construct a VertexBuffer object
     const auto bufferSize = std::ranges::fold_left(
-        _bindings, 0, [this](const auto accum, const Binding& it) { return accum + it.stride * _vertexCount; });
-    const auto buffer = new VertexBuffer{ std::move(_bindings), std::move(_attributes), std::move(offsets), _vertexCount };
-
-    // The buffer must also act as a transfer destination so that we can use staging buffer later to transfer data
-    engine.createDeviceBuffer(
-        bufferSize, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        buffer->_buffer, &buffer->allocation);
+        _bindings, 0, [this](const auto accum, const auto& it) { return accum + it.stride * _vertexCount; });
+    const auto buffer = std::make_shared<VertexBuffer>(
+        std::move(_bindings),
+        std::move(_attributes),
+        std::move(offsets),
+        _vertexCount,
+        bufferSize,
+        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+        engine);
 
     return buffer;
 }
 
 VertexBuffer::VertexBuffer(
-    std::vector<Binding>&& bindings,
-    std::vector<Attribute>&& attributes,
+    std::vector<vk::VertexInputBindingDescription>&& bindings,
+    std::vector<vk::VertexInputAttributeDescription>&& attributes,
     std::vector<vk::DeviceSize>&& offsets,
-    const int vertexCount) noexcept
-: _bindingDescriptions{ std::move(bindings) }, _attributeDescriptions{ attributes },
-  _offsets{ std::move(offsets) }, _vertexCount{ vertexCount } {
+    const int vertexCount,
+    const std::size_t bufferSize,
+    const vk::BufferUsageFlags usage,
+    const Engine& engine
+) : Buffer{ bufferSize, usage, engine },
+    _bindingDescriptions{ std::move(bindings) },
+    _attributeDescriptions{ attributes },
+    _offsets{ std::move(offsets) },
+    _vertexCount{ vertexCount } {
 }
 
 void VertexBuffer::setBindingData(const uint32_t binding, const void* const data, const Engine& engine) const {
-    engine.transferBufferData(_vertexCount * _bindingDescriptions[binding].stride, data, _buffer, _offsets[binding]);
+    transferBufferData(_vertexCount * _bindingDescriptions[binding].stride, data, _offsets[binding], engine);
 }

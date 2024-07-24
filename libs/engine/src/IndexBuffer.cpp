@@ -1,7 +1,5 @@
 #include "engine/IndexBuffer.h"
 
-#include "Translator.h"
-
 
 IndexBuffer::Builder & IndexBuffer::Builder::indexCount(const int count) {
     _indexCount = count;
@@ -13,15 +11,15 @@ IndexBuffer::Builder & IndexBuffer::Builder::indexType(const IndexType type) {
     return *this;
 }
 
-IndexBuffer* IndexBuffer::Builder::build(const Engine& engine) const {
+std::shared_ptr<IndexBuffer> IndexBuffer::Builder::build(const Engine& engine) const {
     // Construct an IndexBuffer object
     const auto bufferSize = getSize(_indexType) * _indexCount;
-    const auto buffer = new IndexBuffer{ static_cast<uint32_t>(_indexCount), getIndexType(_indexType), bufferSize };
-
-    // The buffer must also act as a transfer destination so that we can use staging buffer later to transfer data
-    engine.createDeviceBuffer(
-        bufferSize, vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        buffer->_buffer, &buffer->allocation);
+    const auto buffer = std::make_shared<IndexBuffer>(
+        static_cast<uint32_t>(_indexCount),
+        getIndexType(_indexType),
+        bufferSize,
+        vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+        engine);
 
     return buffer;
 }
@@ -42,10 +40,18 @@ vk::IndexType IndexBuffer::Builder::getIndexType(const IndexType type) {
     }
 }
 
-IndexBuffer::IndexBuffer(const uint32_t indexCount, const vk::IndexType indexType, const std::size_t bufferSize)
-: _indexCount{ indexCount }, _indexType{ indexType }, _bufferSize{ bufferSize } {
+IndexBuffer::IndexBuffer(
+    const uint32_t indexCount,
+    const vk::IndexType indexType,
+    const std::size_t bufferSize,
+    const vk::BufferUsageFlags usage,
+    const Engine& engine
+) : Buffer{ bufferSize, usage, engine },
+    _indexCount{ indexCount },
+    _indexType{ indexType },
+    _bufferSize{ bufferSize } {
 }
 
 void IndexBuffer::setData(const void* const data, const Engine& engine) const {
-    engine.transferBufferData(_bufferSize, data, _buffer, 0);
+    transferBufferData(_bufferSize, data, 0, engine);
 }

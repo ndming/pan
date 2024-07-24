@@ -7,9 +7,13 @@ std::unique_ptr<Context> Context::create(const std::string_view name, const int 
     return std::unique_ptr<Context>{ new Context(name, width, height) };
 }
 
-Context::~Context() {
+void Context::destroy() const noexcept {
     glfwDestroyWindow(_window);
     glfwTerminate();
+}
+
+Surface* Context::getSurface() const {
+    return _window;
 }
 
 Context::Context(const std::string_view name, const int width, const int height) {

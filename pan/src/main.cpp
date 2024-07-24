@@ -3,8 +3,9 @@
 #include <plog/Appenders/ColorConsoleAppender.h>
 #include <plog/Formatters/TxtFormatter.h>
 
-#include <engine/Context.h>
 #include <engine/Engine.h>
+#include <engine/IndexBuffer.h>
+#include <engine/VertexBuffer.h>
 
 #include <glm/glm.hpp>
 
@@ -44,12 +45,12 @@ int main(int argc, char* argv[]) {
         const auto context = Context::create("pan");
 
         // Create an engine
-        const auto engine = Engine::create(context);
+        const auto engine = Engine::create(context->getSurface());
 
         // Create a swap chain
         const auto swapChain = engine->createSwapChain();
 
-        const auto vertexBuffer = VertexBuffer::Builder(2)
+        auto vertexBuffer = VertexBuffer::Builder(2)
             .vertexCount(vertices.size())
             .binding(0, sizeof(glm::vec3))
             .binding(1, sizeof(glm::vec4))
@@ -59,7 +60,7 @@ int main(int argc, char* argv[]) {
         vertexBuffer->setBindingData(0, positions.data(), *engine);
         vertexBuffer->setBindingData(1, colors.data(), *engine);
 
-        const auto indexBuffer = IndexBuffer::Builder()
+        auto indexBuffer = IndexBuffer::Builder()
             .indexCount(indices.size())
             .indexType(IndexType::Uint16)
             .build(*engine);
@@ -72,11 +73,14 @@ int main(int argc, char* argv[]) {
         // Cleaning up resources while that is happening is a bad idea.
         engine->waitIdle();
 
-        // Destroy all resources
-        engine->destroyIndexBuffer(indexBuffer);
-        engine->destroyVertexBuffer(vertexBuffer);
+        // Destroy all rendering resources
+        engine->destroyBuffer(std::move(indexBuffer));
+        engine->destroyBuffer(std::move(vertexBuffer));
         engine->destroySwapChain(swapChain);
         engine->destroy();
+
+        // Destroy the window context
+        context->destroy();
     } catch (const std::exception& e) {
         PLOGE << e.what();
         return EXIT_FAILURE;

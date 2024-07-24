@@ -53,11 +53,11 @@ static constexpr std::array mDeviceExtensions{
 
 
 /* Engine initialization and destruction */
-std::unique_ptr<Engine> Engine::create(const std::unique_ptr<Context>& context, const std::vector<Feature>& features) {
-    return std::unique_ptr<Engine>(new Engine{ context, features });
+std::unique_ptr<Engine> Engine::create(Surface* const surface, const std::vector<Feature>& features) {
+    return std::unique_ptr<Engine>(new Engine{ surface, features });
 }
 
-Engine::Engine(const std::unique_ptr<Context>& context, const std::vector<Feature>& features) {
+Engine::Engine(GLFWwindow* const window, const std::vector<Feature>& features) {
     // Create a Vulkan instance
     _instance = InstanceBuilder()
         .applicationName("pan")
@@ -78,7 +78,7 @@ Engine::Engine(const std::unique_ptr<Context>& context, const std::vector<Featur
     const auto deviceFeatures = getPhysicalDeviceFeatures(features);
     auto deviceExtensions = std::vector(mDeviceExtensions.begin(), mDeviceExtensions.end());
     deviceExtensions.push_back(vk::KHRSwapchainExtensionName);   // to present to a surface
-    _swapChain = std::unique_ptr<SwapChain>(new SwapChain{ context->_window, _instance, deviceFeatures, deviceExtensions });
+    _swapChain = std::unique_ptr<SwapChain>(new SwapChain{ window, _instance, deviceFeatures, deviceExtensions });
 
     // We need to have multiple VkDeviceQueueCreateInfo structs to create a queue from multiple families.
     // An elegant way to do that is to create a set of all unique queue families that are necessary
@@ -155,54 +155,30 @@ void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
     swapChain->_allocator = nullptr;
 }
 
-vk::CommandBuffer Engine::beginSingleTimeTransferCommands() const {
-    const auto allocInfo = vk::CommandBufferAllocateInfo{ _transferCommandPool, vk::CommandBufferLevel::ePrimary, 1 };
-    const auto commandBuffer = _device.allocateCommandBuffers(allocInfo)[0];
-
-    // Use the command buffer once and wait with returning from the function until the copy operation has finished
-    constexpr auto beginInfo = vk::CommandBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
-    commandBuffer.begin(beginInfo);
-
-    return commandBuffer;
-}
-
-void Engine::endSingleTimeTransferCommands(const vk::CommandBuffer &commandBuffer) const {
-    commandBuffer.end();
-    _transferQueue.submit(vk::SubmitInfo{ {}, {}, {}, 1, &commandBuffer });
-    _transferQueue.waitIdle();
-    _device.freeCommandBuffers(_transferCommandPool, 1, &commandBuffer);
-}
-
-void Engine::createDeviceBuffer(const std::size_t bufferSize, const vk::BufferUsageFlags usage, vk::Buffer& buffer, void** allocation) const {
-    auto vmaAllocation = VmaAllocation{};
-    buffer = _allocator->allocateDeviceBuffer(bufferSize, static_cast<VkBufferUsageFlags>(usage), &vmaAllocation);
-    *allocation = vmaAllocation;
-}
-
-void Engine::transferBufferData(const std::size_t bufferSize, const void* const data, const vk::Buffer& buffer, const vk::DeviceSize offset) const {
-    auto stagingAllocation = VmaAllocation{};
-    const auto stagingBuffer = _allocator->allocateStagingBuffer(bufferSize, &stagingAllocation);
-
-    _allocator->mapData(bufferSize, data, stagingAllocation);
-    const auto commandBuffer = beginSingleTimeTransferCommands();
-    commandBuffer.copyBuffer(stagingBuffer, buffer, vk::BufferCopy{ 0, offset, bufferSize });
-    endSingleTimeTransferCommands(commandBuffer);
-
-    _allocator->destroyBuffer(stagingBuffer, stagingAllocation);
-}
-
-void Engine::destroyVertexBuffer(VertexBuffer* const buffer) const noexcept {
-    _allocator->destroyBuffer(buffer->_buffer, static_cast<VmaAllocation>(buffer->allocation));
-    buffer->allocation = nullptr;  // a bit redundant, but this prevents the IDE from suggesting making pointer to const
-    delete buffer;
-}
-
-void Engine::destroyIndexBuffer(IndexBuffer *buffer) const noexcept {
-    _allocator->destroyBuffer(buffer->_buffer, static_cast<VmaAllocation>(buffer->allocation));
-    buffer->allocation = nullptr;  // a bit redundant, but this prevents the IDE from suggesting making pointer to const
-    delete buffer;
+void Engine::destroyBuffer(std::shared_ptr<Buffer>&& buffer) const noexcept {
+    if (buffer.use_count() != 1) {
+        PLOGW << "Destroying a non-unique buffer resource: "
+                 "clear all external references and use std::move() when destroying the buffer with the Engine";
+    }
+    _allocator->destroyBuffer(buffer->getNativeBuffer(), static_cast<VmaAllocation>(buffer->getAllocation()));
 }
 
 void Engine::waitIdle() const {
     _device.waitIdle();
+}
+
+vk::Device Engine::getDevice() const {
+    return _device;
+}
+
+vk::Queue Engine::getTransferQueue() const {
+    return _transferQueue;
+}
+
+vk::CommandPool Engine::getTransferCommandPool() const {
+    return _transferCommandPool;
+}
+
+ResourceAllocator* Engine::getResourceAllocator() const {
+    return  _allocator;
 }

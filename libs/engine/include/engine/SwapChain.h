@@ -91,9 +91,7 @@ private:
     // use the one that corresponds to the retrieved image at drawing time
     std::vector<vk::Framebuffer> _framebuffers{};
 
-    // The Engine needs access to the constructor when creating SwapChain
+    // The Engine needs access to the constructor and initSwapChain method when creating and populating the SwapChain
+    // These are the cases where an 'internal' access specifier like that from the Kotlin language comes in handy
     friend class Engine;
-
-    // The Renderer will be instructing the SwapChain to acquire and present images
-    friend class Renderer;
 };

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
+#include "engine/Buffer.h"
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 
@@ -77,7 +78,7 @@ enum class AttributeFormat {
 };
 
 
-class VertexBuffer {
+class VertexBuffer final : public Buffer {
 public:
     class Builder {
     public:
@@ -115,7 +116,7 @@ public:
          */
         Builder& attribute(uint32_t binding, uint32_t location, AttributeFormat format, uint32_t byteOffset = 0);
 
-        [[nodiscard]] VertexBuffer* build(const Engine& engine);
+        [[nodiscard]] std::shared_ptr<VertexBuffer> build(const Engine& engine);
 
     private:
         static vk::Format getFormat(AttributeFormat format);
@@ -127,29 +128,36 @@ public:
         int _bindingCount{ 0 };
     };
 
+    /**
+     * Transfer data to this vertex buffer at the binding. Note that the operation is asynchronous and the transfer
+     * is only guaranteed to complete prior to the next draw call.
+     *
+     * @param binding The binding to set buffer data.
+     * @param data The data should respect the binding size specified when constructing this vertex buffer.
+     * @param engine The Engine where the transfer and allocation will take place.
+     */
     void setBindingData(uint32_t binding, const void* data, const Engine& engine) const;
 
     VertexBuffer(const VertexBuffer&) = delete;
     VertexBuffer& operator=(const VertexBuffer&) = delete;
 
 private:
-    using Binding = vk::VertexInputBindingDescription;
-    using Attribute = vk::VertexInputAttributeDescription;
-    VertexBuffer(
-        std::vector<Binding>&& bindings,
-        std::vector<Attribute>&& attributes,
-        std::vector<vk::DeviceSize>&& offsets,
-        int vertexCount) noexcept;
-
-    std::vector<Binding> _bindingDescriptions;
-    std::vector<Attribute> _attributeDescriptions;
+    std::vector<vk::VertexInputBindingDescription> _bindingDescriptions;
+    std::vector<vk::VertexInputAttributeDescription> _attributeDescriptions;
     std::vector<vk::DeviceSize> _offsets;
 
     int _vertexCount;
 
-    vk::Buffer _buffer{};
-    void* allocation{ nullptr };
-
-    // The Engine needs access to the vk::Buffer and allocation when destroying the buffer
-    friend class Engine;
+public:
+    /**
+     * This constructor is meant for internal use only. To construct a VertexBuffer, use `VertexBuffer::Builder` class.
+     */
+    VertexBuffer(
+       std::vector<vk::VertexInputBindingDescription>&& bindings,
+       std::vector<vk::VertexInputAttributeDescription>&& attributes,
+       std::vector<vk::DeviceSize>&& offsets,
+       int vertexCount,
+       std::size_t bufferSize,
+       vk::BufferUsageFlags usage,
+       const Engine& engine);
 };

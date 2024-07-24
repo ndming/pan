@@ -3,10 +3,12 @@ cmake_minimum_required(VERSION 3.22)
 set(TARGET engine)
 
 set(SRCS
+        src/Buffer.cpp
         src/Context.cpp
         src/Engine.cpp
         src/IndexBuffer.cpp
         src/Renderer.cpp
+        src/Scene.cpp
         src/SwapChain.cpp
         src/Translator.cpp
         src/VertexBuffer.cpp
@@ -17,6 +19,7 @@ set(SRCS
         src/bootstrap/InstanceBuilder.cpp
         src/bootstrap/PhysicalDeviceSelector.cpp
         src/bootstrap/QueueFamilyFinder.cpp
+        src/graph/Mesh.cpp
 )
 
 # Build a library

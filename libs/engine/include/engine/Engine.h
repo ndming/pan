@@ -1,9 +1,8 @@
 #pragma once
 
 #include "engine/Context.h"
-#include "engine/IndexBuffer.h"
+#include "engine/Buffer.h"
 #include "engine/SwapChain.h"
-#include "engine/VertexBuffer.h"
 
 #include <memory>
 
@@ -17,32 +16,27 @@ public:
         SampleRateShading,
     };
 
-    static std::unique_ptr<Engine> create(const std::unique_ptr<Context>& context, const std::vector<Feature>& features = {});
+    static std::unique_ptr<Engine> create(Surface* surface, const std::vector<Feature>& features = {});
     void destroy() noexcept;
 
     [[nodiscard]] SwapChain* createSwapChain() const;
     void destroySwapChain(SwapChain* swapChain) const noexcept;
 
-    // [[nodiscard]] Renderer* createRenderer(SwapChain* swapChain, Renderer::Pipeline pipeline) const;
-    // void destroyRenderer(const Renderer* renderer) const noexcept;
-
-    void destroyVertexBuffer(VertexBuffer* buffer) const noexcept;
-    void destroyIndexBuffer(IndexBuffer* buffer) const noexcept;
+    void destroyBuffer(std::shared_ptr<Buffer>&& buffer) const noexcept;
 
     void waitIdle() const;
 
     Engine(const Engine&) = delete;
     Engine& operator=(const Engine&) = delete;
 
+    [[nodiscard]] vk::Device getDevice() const;
+    [[nodiscard]] vk::Queue getTransferQueue() const;
+    [[nodiscard]] vk::CommandPool getTransferCommandPool() const;
+    [[nodiscard]] ResourceAllocator* getResourceAllocator() const;
+
 private:
-    Engine(const std::unique_ptr<Context>& context, const std::vector<Feature>& features);
+    Engine(GLFWwindow* window, const std::vector<Feature>& features);
     static vk::PhysicalDeviceFeatures getPhysicalDeviceFeatures(const std::vector<Feature>& features);
-
-    [[nodiscard]] vk::CommandBuffer beginSingleTimeTransferCommands() const;
-    void endSingleTimeTransferCommands(const vk::CommandBuffer &commandBuffer) const;
-
-    void createDeviceBuffer(std::size_t bufferSize, vk::BufferUsageFlags usage, vk::Buffer& buffer, void** allocation) const;
-    void transferBufferData(std::size_t bufferSize, const void* data, const vk::Buffer& buffer, vk::DeviceSize offset) const;
 
     // The instance is the connection between our application and the Vulkan library
     vk::Instance _instance{};
@@ -65,10 +59,7 @@ private:
     vk::CommandPool _transferCommandPool{};
 
     // Our internal allocator, backed by the VMA library. Note that we cannot use a unique_ptr here because otherwise
-    // the compiler would need to see the full definition of ResourceAllocator.
+    // the compiler would need to see the full definition of ResourceAllocator. This would require the library to
+    // expose the VMA and other allocator infrastructure.
     ResourceAllocator* _allocator{ nullptr };
-
-    // The buffers need access to the createDeviceBuffer method
-    friend class VertexBuffer;
-    friend class IndexBuffer;
 };
