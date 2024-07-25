@@ -23,5 +23,5 @@ public:
 private:
     Context(std::string_view name, int width, int height);
 
-    GLFWwindow* _window{ nullptr };
+    GLFWwindow* _window;
 };

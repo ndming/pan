@@ -180,5 +180,5 @@ vk::CommandPool Engine::getTransferCommandPool() const {
 }
 
 ResourceAllocator* Engine::getResourceAllocator() const {
-    return  _allocator;
+    return _allocator;
 }

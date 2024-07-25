@@ -24,6 +24,6 @@ private:
     static [[nodiscard]] vk::CommandBuffer beginSingleTimeTransferCommands(const Engine& engine);
     static void endSingleTimeTransferCommands(const vk::CommandBuffer &commandBuffer, const Engine& engine);
 
-    vk::Buffer _buffer{};
-    void* _allocation{ nullptr };
+    vk::Buffer _buffer;
+    void* _allocation;
 };

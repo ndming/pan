@@ -50,13 +50,13 @@ private:
     void recreate(const vk::Device& device, vk::SampleCountFlagBits msaa);
     void cleanup(const vk::Device& device) const noexcept;
 
-    GLFWwindow* _window{ nullptr };
-    vk::SurfaceKHR _surface{};
+    GLFWwindow* _window;
+    vk::SurfaceKHR _surface;
 
-    vk::PhysicalDevice _physicalDevice{};
-    std::optional<uint32_t> _graphicsFamily{};
-    std::optional<uint32_t> _presentFamily{};
-    std::optional<uint32_t> _computeFamily{};
+    vk::PhysicalDevice _physicalDevice;
+    std::optional<uint32_t> _graphicsFamily;
+    std::optional<uint32_t> _presentFamily;
+    std::optional<uint32_t> _computeFamily;
 
     // Vulkan does not have the concept of a "default framebuffer", hence it requires an infrastructure that will
     // own the buffers we will render to before we visualize them on the screen. The swap chain is essentially a queue
