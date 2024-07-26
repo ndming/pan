@@ -81,7 +81,7 @@ SwapChain::SwapChain(
     PLOG_INFO << "Found a suitable device: " << properties.deviceName.data();
 }
 
-void SwapChain::initSwapChain(const vk::Device& device, ResourceAllocator* const allocator) {
+void SwapChain::init(const vk::Device& device, ResourceAllocator* const allocator) {
     _allocator = allocator;
 
     createSwapChain(device);

@@ -3,7 +3,6 @@
 #include "engine/Buffer.h"
 
 #include <cstdint>
-#include <memory>
 #include <vector>
 
 
@@ -116,7 +115,7 @@ public:
          */
         Builder& attribute(uint32_t binding, uint32_t location, AttributeFormat format, uint32_t byteOffset = 0);
 
-        [[nodiscard]] std::shared_ptr<VertexBuffer> build(const Engine& engine);
+        [[nodiscard]] VertexBuffer* build(const Engine& engine);
 
     private:
         static vk::Format getFormat(AttributeFormat format);
@@ -142,16 +141,6 @@ public:
     VertexBuffer& operator=(const VertexBuffer&) = delete;
 
 private:
-    std::vector<vk::VertexInputBindingDescription> _bindingDescriptions;
-    std::vector<vk::VertexInputAttributeDescription> _attributeDescriptions;
-    std::vector<vk::DeviceSize> _offsets;
-
-    int _vertexCount;
-
-public:
-    /**
-     * This constructor is meant for internal use only. To construct a VertexBuffer, use `VertexBuffer::Builder` class.
-     */
     VertexBuffer(
        std::vector<vk::VertexInputBindingDescription>&& bindings,
        std::vector<vk::VertexInputAttributeDescription>&& attributes,
@@ -160,4 +149,10 @@ public:
        std::size_t bufferSize,
        vk::BufferUsageFlags usage,
        const Engine& engine);
+
+    std::vector<vk::VertexInputBindingDescription> _bindingDescriptions;
+    std::vector<vk::VertexInputAttributeDescription> _attributeDescriptions;
+    std::vector<vk::DeviceSize> _offsets;
+
+    int _vertexCount;
 };

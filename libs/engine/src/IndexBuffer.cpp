@@ -11,17 +11,17 @@ IndexBuffer::Builder & IndexBuffer::Builder::indexType(const IndexType type) {
     return *this;
 }
 
-std::shared_ptr<IndexBuffer> IndexBuffer::Builder::build(const Engine& engine) const {
+IndexBuffer* IndexBuffer::Builder::build(const Engine& engine) const {
     // Construct an IndexBuffer object
     const auto bufferSize = getSize(_indexType) * _indexCount;
-    const auto buffer = std::make_shared<IndexBuffer>(
+
+    return new IndexBuffer{
         static_cast<uint32_t>(_indexCount),
         getIndexType(_indexType),
         bufferSize,
         vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        engine);
-
-    return buffer;
+        engine
+    };
 }
 
 std::size_t IndexBuffer::Builder::getSize(const IndexType type) {

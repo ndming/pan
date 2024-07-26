@@ -32,7 +32,7 @@ private:
         const vk::PhysicalDeviceFeatures& features,
         const std::vector<const char*>& extensions);
 
-    void initSwapChain(const vk::Device& device, ResourceAllocator* allocator);
+    void init(const vk::Device& device, ResourceAllocator* allocator);
 
     void createSwapChain(const vk::Device& device);
     void createImageViews(const vk::Device& device);

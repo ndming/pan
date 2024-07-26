@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
         // Create a swap chain
         const auto swapChain = engine->createSwapChain();
 
-        auto vertexBuffer = VertexBuffer::Builder(2)
+        const auto vertexBuffer = VertexBuffer::Builder(2)
             .vertexCount(vertices.size())
             .binding(0, sizeof(glm::vec3))
             .binding(1, sizeof(glm::vec4))
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
         vertexBuffer->setBindingData(0, positions.data(), *engine);
         vertexBuffer->setBindingData(1, colors.data(), *engine);
 
-        auto indexBuffer = IndexBuffer::Builder()
+        const auto indexBuffer = IndexBuffer::Builder()
             .indexCount(indices.size())
             .indexType(IndexType::Uint16)
             .build(*engine);
@@ -74,8 +74,8 @@ int main(int argc, char* argv[]) {
         engine->waitIdle();
 
         // Destroy all rendering resources
-        engine->destroyBuffer(std::move(indexBuffer));
-        engine->destroyBuffer(std::move(vertexBuffer));
+        engine->destroyBuffer(indexBuffer);
+        engine->destroyBuffer(vertexBuffer);
         engine->destroySwapChain(swapChain);
         engine->destroy();
 

@@ -78,7 +78,7 @@ Engine::Engine(GLFWwindow* const window, const std::vector<Feature>& features) {
     const auto deviceFeatures = getPhysicalDeviceFeatures(features);
     auto deviceExtensions = std::vector(mDeviceExtensions.begin(), mDeviceExtensions.end());
     deviceExtensions.push_back(vk::KHRSwapchainExtensionName);   // to present to a surface
-    _swapChain = std::unique_ptr<SwapChain>(new SwapChain{ window, _instance, deviceFeatures, deviceExtensions });
+    _swapChain = new SwapChain{ window, _instance, deviceFeatures, deviceExtensions };
 
     // We need to have multiple VkDeviceQueueCreateInfo structs to create a queue from multiple families.
     // An elegant way to do that is to create a set of all unique queue families that are necessary
@@ -131,9 +131,13 @@ vk::PhysicalDeviceFeatures Engine::getPhysicalDeviceFeatures(const std::vector<F
 void Engine::destroy() noexcept {
     delete _allocator;
     _allocator = nullptr;
+
     _device.destroyCommandPool(_transferCommandPool);
+
     _device.destroy(nullptr);
-    _swapChain.reset(nullptr);
+
+    delete _swapChain;
+    _swapChain = nullptr;
 #ifndef NDEBUG
     DebugMessenger::destroy(_instance, _debugMessenger);
 #endif
@@ -144,8 +148,8 @@ void Engine::destroy() noexcept {
 /* Swap chain */
 SwapChain* Engine::createSwapChain() const {
     // Create a native Vulkan swap chain object and populate its resources
-    _swapChain->initSwapChain(_device, _allocator);
-    return _swapChain.get();
+    _swapChain->init(_device, _allocator);
+    return _swapChain;
 }
 
 void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
@@ -155,12 +159,9 @@ void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
     swapChain->_allocator = nullptr;
 }
 
-void Engine::destroyBuffer(std::shared_ptr<Buffer>&& buffer) const noexcept {
-    if (buffer.use_count() != 1) {
-        PLOGW << "Destroying a non-unique buffer resource: "
-                 "clear all external references and use std::move() when destroying the buffer with the Engine";
-    }
+void Engine::destroyBuffer(const Buffer* const buffer) const noexcept {
     _allocator->destroyBuffer(buffer->getNativeBuffer(), static_cast<VmaAllocation>(buffer->getAllocation()));
+    delete buffer;
 }
 
 void Engine::waitIdle() const {

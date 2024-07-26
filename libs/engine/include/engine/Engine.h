@@ -22,7 +22,7 @@ public:
     [[nodiscard]] SwapChain* createSwapChain() const;
     void destroySwapChain(SwapChain* swapChain) const noexcept;
 
-    void destroyBuffer(std::shared_ptr<Buffer>&& buffer) const noexcept;
+    void destroyBuffer(const Buffer* buffer) const noexcept;
 
     void waitIdle() const;
 
@@ -51,7 +51,7 @@ private:
     // the underlying surface which plays a crucial role in selecting the physical device. A call to createSwapChain
     // will instead populate the SwapChain's resources (eg. render targets). The SwapChain will own the physial device
     // and queue families since it uses them more frequently.
-    std::unique_ptr<SwapChain> _swapChain;
+    SwapChain* _swapChain;
 
     vk::Device _device;
 

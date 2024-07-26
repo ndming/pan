@@ -65,7 +65,7 @@ vk::Format VertexBuffer::Builder::getFormat(const AttributeFormat format) {
     }
 }
 
-std::shared_ptr<VertexBuffer> VertexBuffer::Builder::build(const Engine& engine) {
+VertexBuffer* VertexBuffer::Builder::build(const Engine& engine) {
     // Calculate the offsets for each binding
     auto offsets = std::vector<vk::DeviceSize>(_bindingCount);
     offsets[0] = vk::DeviceSize{ 0 };
@@ -76,16 +76,15 @@ std::shared_ptr<VertexBuffer> VertexBuffer::Builder::build(const Engine& engine)
     // Calculate the buffer total size and construct a VertexBuffer object
     const auto bufferSize = std::ranges::fold_left(
         _bindings, 0, [this](const auto accum, const auto& it) { return accum + it.stride * _vertexCount; });
-    const auto buffer = std::make_shared<VertexBuffer>(
+    return new VertexBuffer{
         std::move(_bindings),
         std::move(_attributes),
         std::move(offsets),
         _vertexCount,
         bufferSize,
         vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        engine);
-
-    return buffer;
+        engine
+    };
 }
 
 VertexBuffer::VertexBuffer(
