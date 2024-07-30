@@ -4,13 +4,15 @@ set(TARGET engine)
 
 set(SRCS
         src/Buffer.cpp
+        src/ComputeShader.cpp
         src/Context.cpp
         src/Engine.cpp
+        src/GraphicShader.cpp
         src/IndexBuffer.cpp
         src/Renderer.cpp
         src/Scene.cpp
+        src/Shader.cpp
         src/SwapChain.cpp
-        src/Translator.cpp
         src/VertexBuffer.cpp
         src/allocator/ResourceAllocator.cpp
         src/allocator/VmaUsage.cpp
@@ -19,7 +21,6 @@ set(SRCS
         src/bootstrap/InstanceBuilder.cpp
         src/bootstrap/PhysicalDeviceSelector.cpp
         src/bootstrap/QueueFamilyFinder.cpp
-        src/graph/Mesh.cpp
 )
 
 # Build a library
@@ -43,27 +44,27 @@ target_link_libraries(${TARGET} PRIVATE ${Vulkan_LIBRARIES})
 find_program(GLSL_COMPILER glslc HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
 message(STATUS "Using GLSL compiler at: ${GLSL_COMPILER}")
 
-# Define the output directory for SPIR-V binaries
-set(SPIR_V_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
-file(MAKE_DIRECTORY ${SPIR_V_OUTPUT_DIR})
+# Shader compilation
+function(compile_shaders
+        TARGET_NAME
+        SPIR_V_OUTPUT_DIR
+        GLSL_SOURCE_FILES)
+    file(MAKE_DIRECTORY ${SPIR_V_OUTPUT_DIR})
 
-set(GLSL_SOURCE_FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/particle.vert
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/particle.frag
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/particle.comp
-)
-foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
-    get_filename_component(FILE_NAME ${GLSL_FILE} NAME)
-    set(SPIR_V "${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME}.spv")
+    foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
+        get_filename_component(FILE_NAME ${GLSL_FILE} NAME)
+        set(SPIR_V "${SPIR_V_OUTPUT_DIR}/${FILE_NAME}.spv")
 
-    add_custom_command(
-            OUTPUT ${SPIR_V}
-            COMMAND ${GLSL_COMPILER} -o ${SPIR_V} ${GLSL_FILE}
-            DEPENDS ${GLSL_FILE}
-            COMMENT "Compiling ${FILE_NAME}")
-    list(APPEND SPIR_V_BINARY_FILES ${SPIR_V})
-endforeach(GLSL_FILE)
+        add_custom_command(
+                OUTPUT ${SPIR_V}
+                COMMAND ${GLSL_COMPILER} -o ${SPIR_V} ${GLSL_FILE}
+                DEPENDS ${GLSL_FILE}
+                COMMENT "Compiling ${FILE_NAME}")
 
-# Add a custom target to build all SPIR-V binaries
-add_custom_target(compile_shaders ALL DEPENDS ${SPIR_V_BINARY_FILES})
-add_dependencies(${TARGET} compile_shaders)
+        list(APPEND SPIR_V_BINARY_FILES ${SPIR_V})
+    endforeach(GLSL_FILE)
+
+    # Create an INTERFACE library to represent the compiled shaders
+    add_library(${TARGET_NAME}_shaders INTERFACE)
+    target_sources(${TARGET_NAME}_shaders INTERFACE ${SPIR_V_BINARY_FILES})
+endfunction()

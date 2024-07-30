@@ -4,6 +4,7 @@
 #include <plog/Formatters/TxtFormatter.h>
 
 #include <engine/Engine.h>
+#include <engine/GraphicShader.h>
 #include <engine/IndexBuffer.h>
 #include <engine/VertexBuffer.h>
 
@@ -66,6 +67,14 @@ int main(int argc, char* argv[]) {
             .build(*engine);
         indexBuffer->setData(indices.data(), *engine);
 
+        auto shader = GraphicShader::Builder()
+            .descriptorCount(2)
+            .descriptor(0, DescriptorType::UniformBuffer, 1, Shader::Stage::Vertex)
+            .descriptor(1, DescriptorType::CombinedImageSampler, 1, Shader::Stage::Fragment)
+            .vertexShader("shaders/shader.vert")
+            .fragmentShader("shaders/shader.frag")
+            .build(*engine, *swapChain);
+
         // The render loop
         context->loop([] {});
 
@@ -74,6 +83,7 @@ int main(int argc, char* argv[]) {
         engine->waitIdle();
 
         // Destroy all rendering resources
+        engine->destroyShader(shader);
         engine->destroyBuffer(indexBuffer);
         engine->destroyBuffer(vertexBuffer);
         engine->destroySwapChain(swapChain);

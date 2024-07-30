@@ -7,29 +7,24 @@
 #include <vector>
 
 
+struct EngineFeature;
 struct GLFWwindow;
 class ResourceAllocator;
 
 class SwapChain final {
 public:
-    enum class MSAA {
-        x1,
-        x2,
-        x4,
-        x8,
-        x16,
-        x32,
-        x64,
-    };
-
     SwapChain(const SwapChain&) = delete;
     SwapChain& operator=(const SwapChain&) = delete;
+
+    [[nodiscard]] vk::RenderPass getNativeRenderPass() const;
+    [[nodiscard]] vk::SampleCountFlagBits getNativeSampleCount() const;
+    [[nodiscard]] vk::SampleCountFlagBits getNativeMaxUsableSampleCount() const;
 
 private:
     SwapChain(
         GLFWwindow* window,
         const vk::Instance& instance,
-        const vk::PhysicalDeviceFeatures& features,
+        const EngineFeature& feature,
         const std::vector<const char*>& extensions);
 
     void init(const vk::Device& device, ResourceAllocator* allocator);
@@ -46,6 +41,8 @@ private:
     [[nodiscard]] static SurfaceFormat chooseSwapSurfaceFormat(const std::vector<SurfaceFormat>& availableFormats);
     [[nodiscard]] static PresentMode chooseSwapPresentMode(const std::vector<PresentMode>& availablePresentModes);
     [[nodiscard]] static vk::Extent2D chooseSwapExtent(const SurfaceCapabilities& capabilities, GLFWwindow* window);
+    void createRenderPassWithoutMSAA(const vk::Device& device);
+    void createRenderPassWithMSAA(const vk::Device& device);
 
     void recreate(const vk::Device& device, vk::SampleCountFlagBits msaa);
     void cleanup(const vk::Device& device) const noexcept;

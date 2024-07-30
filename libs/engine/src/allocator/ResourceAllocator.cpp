@@ -61,7 +61,7 @@ vk::Image ResourceAllocator::allocateColorAttachmentImage(
 
     auto image = VkImage{};
     if (vmaCreateImage(_allocator, &imageCreateInfo, &allocInfo, &image, allocation, nullptr) != VK_SUCCESS) {
-        PLOG_ERROR << "Could not create color attachment image";
+        PLOGE << "Could not create color attachment image";
         throw std::runtime_error("Failed to create color attachment image");
     }
 
@@ -101,7 +101,7 @@ vk::Buffer ResourceAllocator::allocateStagingBuffer(const std::size_t bufferSize
 
     auto buffer = VkBuffer{};
     if (vmaCreateBuffer(_allocator, &bufferCreateInfo, &allocCreateInfo, &buffer, allocation, nullptr) != VK_SUCCESS) {
-        PLOG_ERROR << "Could not create staging buffer";
+        PLOGE << "Could not create staging buffer";
         throw std::runtime_error("Failed to create staging buffer");
     }
 

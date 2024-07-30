@@ -2,6 +2,7 @@
 
 #include "engine/Context.h"
 #include "engine/Buffer.h"
+#include "engine/Shader.h"
 #include "engine/SwapChain.h"
 
 #include <memory>
@@ -9,14 +10,17 @@
 
 class ResourceAllocator;
 
+struct EngineFeature {
+    bool depthClamp{ false };
+    bool msaa{ false };
+    bool largePoints{ false };
+    bool sampleShading{ false };
+    bool wideLines{ false };
+}; // Any update to this struct requires an asscoiate update to the getPhysicalDeviceFeatures method
+
 class Engine final {
 public:
-    enum class Feature {
-        SamplerAnisotropy,
-        SampleRateShading,
-    };
-
-    static std::unique_ptr<Engine> create(Surface* surface, const std::vector<Feature>& features = {});
+    static std::unique_ptr<Engine> create(Surface* surface, const EngineFeature& feature = {});
     void destroy() noexcept;
 
     [[nodiscard]] SwapChain* createSwapChain() const;
@@ -24,19 +28,29 @@ public:
 
     void destroyBuffer(const Buffer* buffer) const noexcept;
 
+    void destroyShader(std::unique_ptr<Shader>& shader) const noexcept;
+
     void waitIdle() const;
 
     Engine(const Engine&) = delete;
     Engine& operator=(const Engine&) = delete;
 
-    [[nodiscard]] vk::Device getDevice() const;
-    [[nodiscard]] vk::Queue getTransferQueue() const;
-    [[nodiscard]] vk::CommandPool getTransferCommandPool() const;
+    [[nodiscard]] const EngineFeature& getEngineFeature() const;
+
+    [[nodiscard]] vk::Device getNativeDevice() const;
+
+    [[nodiscard]] vk::Queue getNativeTransferQueue() const;
+    [[nodiscard]] vk::CommandPool getNativeTransferCommandPool() const;
+
     [[nodiscard]] ResourceAllocator* getResourceAllocator() const;
 
 private:
-    Engine(GLFWwindow* window, const std::vector<Feature>& features);
-    static vk::PhysicalDeviceFeatures getPhysicalDeviceFeatures(const std::vector<Feature>& features);
+    Engine(GLFWwindow* window, const EngineFeature& feature);
+    static vk::PhysicalDeviceFeatures2 getPhysicalDeviceFeatures(const EngineFeature& feature);
+    static void cleanupPhysicalDeviceFeatures(const vk::PhysicalDeviceFeatures2& deviceFeatures);
+
+    // The EngineFeature affects how graphics pipelines are created
+    EngineFeature _feature;
 
     // The instance is the connection between our application and the Vulkan library
     vk::Instance _instance;

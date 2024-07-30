@@ -128,8 +128,8 @@ public:
     };
 
     /**
-     * Transfer data to this vertex buffer at the binding. Note that the operation is asynchronous and the transfer
-     * is only guaranteed to complete prior to the next draw call.
+     * Transfer vertex data to this buffer at the binding.The operation is synchronous and the transfer is guaranteed
+     * to complete when the function returns.
      *
      * @param binding The binding to set buffer data.
      * @param data The data should respect the binding size specified when constructing this vertex buffer.

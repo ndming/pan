@@ -19,11 +19,10 @@ target_link_libraries(${TARGET} PRIVATE gui)
 
 # Shader resources
 set(SPIR_V_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
-file(MAKE_DIRECTORY ${SPIR_V_OUTPUT_DIR})
-add_dependencies(${TARGET} compile_shaders)
-add_custom_command(
-        TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_BINARY_DIR}/libs/engine/shaders
-        ${SPIR_V_OUTPUT_DIR}
+set(SHADER_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader.frag
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader.vert
 )
+
+compile_shaders(${TARGET} ${SPIR_V_OUTPUT_DIR} "${SHADER_FILES}")
+target_link_libraries(${TARGET} PRIVATE ${TARGET}_shaders)

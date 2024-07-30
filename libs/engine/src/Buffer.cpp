@@ -41,8 +41,8 @@ void Buffer::transferBufferData(
 }
 
 vk::CommandBuffer Buffer::beginSingleTimeTransferCommands(const Engine& engine) {
-    const auto allocInfo = vk::CommandBufferAllocateInfo{ engine.getTransferCommandPool(), vk::CommandBufferLevel::ePrimary, 1 };
-    const auto commandBuffer = engine.getDevice().allocateCommandBuffers(allocInfo)[0];
+    const auto allocInfo = vk::CommandBufferAllocateInfo{ engine.getNativeTransferCommandPool(), vk::CommandBufferLevel::ePrimary, 1 };
+    const auto commandBuffer = engine.getNativeDevice().allocateCommandBuffers(allocInfo)[0];
 
     // Use the command buffer once and wait with returning from the function until the copy operation has finished
     constexpr auto beginInfo = vk::CommandBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
@@ -52,10 +52,17 @@ vk::CommandBuffer Buffer::beginSingleTimeTransferCommands(const Engine& engine) 
 }
 
 void Buffer::endSingleTimeTransferCommands(const vk::CommandBuffer &commandBuffer, const Engine& engine) {
-    const auto transferQueue = engine.getTransferQueue();
+    const auto transferQueue = engine.getNativeTransferQueue();
 
     commandBuffer.end();
     transferQueue.submit(vk::SubmitInfo{ {}, {}, {}, 1, &commandBuffer });
+
+    // Unlike the draw commands, there are no events we need to wait on this time. We just want to execute the transfer
+    // on the buffers immediately. There are again two possible ways to wait on this transfer to complete. We could use
+    // a fence and wait with vkWaitForFences, or simply wait for the transfer queue to become idle with vkQueueWaitIdle.
+    // A fence would allow scheduling multiple transfers simultaneously and wait for all of them to complete, instead
+    // of executing one at a time. That may give the driver more opportunities to optimize.
     transferQueue.waitIdle();
-    engine.getDevice().freeCommandBuffers(engine.getTransferCommandPool(), 1, &commandBuffer);
+
+    engine.getNativeDevice().freeCommandBuffers(engine.getNativeTransferCommandPool(), 1, &commandBuffer);
 }

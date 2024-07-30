@@ -2,14 +2,8 @@
 
 #include "allocator/ResourceAllocator.h"
 
-#ifndef NDEBUG
-#include "bootstrap/DebugMessenger.h"
-#endif
-
 #include "bootstrap/DeviceBuilder.h"
 #include "bootstrap/InstanceBuilder.h"
-
-#include <plog/Log.h>
 
 #include <array>
 #include <ranges>
@@ -17,6 +11,9 @@
 
 
 #ifndef NDEBUG
+#include "bootstrap/DebugMessenger.h"
+#include <plog/Log.h>
+
 /* Validation layers and messenger callback */
 static constexpr std::array mValidationLayers{
     "VK_LAYER_KHRONOS_validation",    // standard validation
@@ -47,22 +44,23 @@ VKAPI_ATTR vk::Bool32 VKAPI_CALL mCallback(
 
 /* Device extensions explicitly required by the engine */
 static constexpr std::array mDeviceExtensions{
-    vk::EXTMemoryBudgetExtensionName,      // to make our allocator estimate memory budget more accurately
-    vk::EXTMemoryPriorityExtensionName,    // incorporate memory priority to the allocator
+    vk::EXTMemoryBudgetExtensionName,             // to make our allocator estimate memory budget more accurately
+    vk::EXTMemoryPriorityExtensionName,           // incorporate memory priority to the allocator
+    vk::EXTVertexInputDynamicStateExtensionName,  // allow the vertex binding and attribute to be changed dynamically
+    vk::EXTExtendedDynamicState3ExtensionName,    // dynamic polygon mode, msaa, and depth clamp
 };
 
 
-/* Engine initialization and destruction */
-std::unique_ptr<Engine> Engine::create(Surface* const surface, const std::vector<Feature>& features) {
-    return std::unique_ptr<Engine>(new Engine{ surface, features });
+std::unique_ptr<Engine> Engine::create(Surface* const surface, const EngineFeature& feature) {
+    return std::unique_ptr<Engine>(new Engine{ surface, feature });
 }
 
-Engine::Engine(GLFWwindow* const window, const std::vector<Feature>& features) {
+Engine::Engine(GLFWwindow* const window, const EngineFeature& feature) {
     // Create a Vulkan instance
     _instance = InstanceBuilder()
         .applicationName("pan")
         .applicationVersion(1, 0, 0)
-        .apiVersion(1, 2, 0)
+        .apiVersion(1, 3, 0)
 #ifndef NDEBUG
         .layers(mValidationLayers.data(), mValidationLayers.size())
         .callback(mCallback)
@@ -75,10 +73,17 @@ Engine::Engine(GLFWwindow* const window, const std::vector<Feature>& features) {
 #endif
 
     // Have the swap chain create a surface and pick the physical device according to its need
-    const auto deviceFeatures = getPhysicalDeviceFeatures(features);
     auto deviceExtensions = std::vector(mDeviceExtensions.begin(), mDeviceExtensions.end());
     deviceExtensions.push_back(vk::KHRSwapchainExtensionName);   // to present to a surface
-    _swapChain = new SwapChain{ window, _instance, deviceFeatures, deviceExtensions };
+    try {
+        _swapChain = new SwapChain{ window, _instance, feature, deviceExtensions };
+    } catch (const std::exception&) {
+#ifndef NDEBUG
+        DebugMessenger::destroy(_instance, _debugMessenger);
+#endif
+        _instance.destroy(nullptr);
+        throw;
+    }
 
     // We need to have multiple VkDeviceQueueCreateInfo structs to create a queue from multiple families.
     // An elegant way to do that is to create a set of all unique queue families that are necessary
@@ -90,6 +95,7 @@ Engine::Engine(GLFWwindow* const window, const std::vector<Feature>& features) {
 
     // Set up a logical device to interface with the selected physical device. We can create multiple logical devices
     // from the same physical device if we have varying requirements
+    const auto deviceFeatures = getPhysicalDeviceFeatures(feature);
     _device = DeviceBuilder()
         .queueFamilies(uniqueFamilies)
         .deviceFeatures(deviceFeatures)
@@ -109,23 +115,73 @@ Engine::Engine(GLFWwindow* const window, const std::vector<Feature>& features) {
     // Create a resource allocator
     _allocator = ResourceAllocator::Builder()
         .flags(VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT)
-        .vulkanApiVersion(VK_API_VERSION_1_2)
+        .vulkanApiVersion(VK_API_VERSION_1_3)
         .build(_instance, _swapChain->_physicalDevice, _device);
+
+    // The physical device features structure were dynamically allocated
+    cleanupPhysicalDeviceFeatures(deviceFeatures);
+    _feature = feature;
 }
 
-vk::PhysicalDeviceFeatures Engine::getPhysicalDeviceFeatures(const std::vector<Feature> &features) {
-    auto deviceFeatures = vk::PhysicalDeviceFeatures{};
-
-    for (const auto& feature : features) {
-        switch (feature) {
-            case Feature::SamplerAnisotropy:
-                deviceFeatures.samplerAnisotropy = vk::True; break;
-            case Feature::SampleRateShading:
-                deviceFeatures.sampleRateShading = vk::True; break;
-        }
+vk::PhysicalDeviceFeatures2 Engine::getPhysicalDeviceFeatures(const EngineFeature& feature) {
+    // Basic features
+    auto basicFeatures = vk::PhysicalDeviceFeatures{};
+    if (feature.depthClamp) {
+        basicFeatures.depthClamp = vk::True;
+    }
+    if (feature.largePoints) {
+        basicFeatures.largePoints = vk::True;
+    }
+    if (feature.sampleShading) {
+        basicFeatures.sampleRateShading = vk::True;
+    }
+    if (feature.wideLines) {
+        basicFeatures.wideLines = vk::True;
     }
 
+    // Vertex input dynamic state features
+    auto vertexInputDynamicStateFeatures = new vk::PhysicalDeviceVertexInputDynamicStateFeaturesEXT{};
+    vertexInputDynamicStateFeatures->vertexInputDynamicState = vk::True;
+
+    // Extended dynamic state features: cull mode, front face, primitive topology
+    auto extendedDynamicStateFeatures = new vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT{};
+    extendedDynamicStateFeatures->extendedDynamicState = vk::True;
+
+    // Extended dynamic state 2 features: primitive restart
+    auto extendedDynamicState2Features = new vk::PhysicalDeviceExtendedDynamicState2FeaturesEXT{};
+    extendedDynamicState2Features->extendedDynamicState2 = vk::True;
+
+    // Extended dynamic state 3 features
+    auto extendedDynamicState3Features = new vk::PhysicalDeviceExtendedDynamicState3FeaturesEXT{};
+    extendedDynamicState3Features->extendedDynamicState3PolygonMode = vk::True;  // explicitly required by the Engine
+    if (feature.depthClamp) {
+        extendedDynamicState3Features->extendedDynamicState3DepthClampEnable = vk::True;
+    }
+    if (feature.msaa) {
+        extendedDynamicState3Features->extendedDynamicState3RasterizationSamples = vk::True;
+    }
+
+    // Any update to this feature chain must also get updated in the PhysicalDeviceSelector::checkFeatureSupport method
+    auto deviceFeatures = vk::PhysicalDeviceFeatures2{};
+    deviceFeatures.features = basicFeatures;
+    deviceFeatures.pNext = vertexInputDynamicStateFeatures;
+    vertexInputDynamicStateFeatures->pNext = extendedDynamicStateFeatures;
+    extendedDynamicStateFeatures->pNext = extendedDynamicState2Features;
+    extendedDynamicState2Features->pNext = extendedDynamicState3Features;
+
     return deviceFeatures;
+}
+
+void Engine::cleanupPhysicalDeviceFeatures(const vk::PhysicalDeviceFeatures2& deviceFeatures) {
+    const auto vertexInputDynamicStateFeatures = static_cast<vk::PhysicalDeviceVertexInputDynamicStateFeaturesEXT*>(deviceFeatures.pNext);
+    const auto extendedDynamicStateFeatures = static_cast<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT*>(vertexInputDynamicStateFeatures->pNext);
+    const auto extendedDynamicState2Features = static_cast<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT*>(extendedDynamicStateFeatures->pNext);
+    const auto extendedDynamicState3Features = static_cast<vk::PhysicalDeviceExtendedDynamicState3FeaturesEXT*>(extendedDynamicState2Features->pNext);
+
+    delete extendedDynamicState3Features;
+    delete extendedDynamicState2Features;
+    delete extendedDynamicStateFeatures;
+    delete vertexInputDynamicStateFeatures;
 }
 
 void Engine::destroy() noexcept {
@@ -145,7 +201,6 @@ void Engine::destroy() noexcept {
 }
 
 
-/* Swap chain */
 SwapChain* Engine::createSwapChain() const {
     // Create a native Vulkan swap chain object and populate its resources
     _swapChain->init(_device, _allocator);
@@ -159,24 +214,38 @@ void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
     swapChain->_allocator = nullptr;
 }
 
+
 void Engine::destroyBuffer(const Buffer* const buffer) const noexcept {
     _allocator->destroyBuffer(buffer->getNativeBuffer(), static_cast<VmaAllocation>(buffer->getAllocation()));
     delete buffer;
 }
 
+void Engine::destroyShader(std::unique_ptr<Shader>& shader) const noexcept {
+    _device.destroyPipeline(shader->getNativePipeline());
+    _device.destroyPipelineLayout(shader->getNativePipelineLayout());
+    _device.destroyDescriptorSetLayout(shader->getNativeDescriptorSetLayout());
+    shader.reset(nullptr);
+}
+
+
 void Engine::waitIdle() const {
     _device.waitIdle();
 }
 
-vk::Device Engine::getDevice() const {
+
+const EngineFeature & Engine::getEngineFeature() const {
+    return _feature;
+}
+
+vk::Device Engine::getNativeDevice() const {
     return _device;
 }
 
-vk::Queue Engine::getTransferQueue() const {
+vk::Queue Engine::getNativeTransferQueue() const {
     return _transferQueue;
 }
 
-vk::CommandPool Engine::getTransferCommandPool() const {
+vk::CommandPool Engine::getNativeTransferCommandPool() const {
     return _transferCommandPool;
 }
 

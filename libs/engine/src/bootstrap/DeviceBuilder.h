@@ -9,7 +9,7 @@
 class DeviceBuilder {
 public:
     DeviceBuilder& queueFamilies(const std::set<uint32_t>& families);
-    DeviceBuilder& deviceFeatures(const vk::PhysicalDeviceFeatures& features);
+    DeviceBuilder& deviceFeatures(const vk::PhysicalDeviceFeatures2& features);
     DeviceBuilder& deviceExtensions(const std::vector<const char*>& extensions);
     DeviceBuilder& validationLayers(const std::vector<const char*>& layers);
 
@@ -17,7 +17,7 @@ public:
 
 private:
     std::set<uint32_t> _uniqueFamilies{};
-    vk::PhysicalDeviceFeatures _deviceFeatures{};
+    vk::PhysicalDeviceFeatures2 _deviceFeatures{};
     std::vector<const char*> _deviceExtensions{};
     std::vector<const char*> _validationLayers{};
 };

@@ -13,7 +13,7 @@ DeviceBuilder& DeviceBuilder::deviceExtensions(const std::vector<const char*>& e
     return *this;
 }
 
-DeviceBuilder& DeviceBuilder::deviceFeatures(const vk::PhysicalDeviceFeatures& features) {
+DeviceBuilder& DeviceBuilder::deviceFeatures(const vk::PhysicalDeviceFeatures2& features) {
     _deviceFeatures = features;
     return *this;
 }
@@ -38,7 +38,8 @@ vk::Device DeviceBuilder::build(const vk::PhysicalDevice& physicalDevice) const 
     auto deviceCreateInfo = vk::DeviceCreateInfo{};
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCreateInfo.pEnabledFeatures = &_deviceFeatures;
+    deviceCreateInfo.pEnabledFeatures = nullptr;  // we're using vk::PhysicalDeviceFeatures2 specified in the pNext ptr
+    deviceCreateInfo.pNext = &_deviceFeatures;
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(_deviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = _deviceExtensions.data();
 
