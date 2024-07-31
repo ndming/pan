@@ -26,8 +26,8 @@ static constexpr auto vertices = std::array{
 
 static constexpr auto positions = std::array{
     glm::vec3{ -0.5f, -0.5f, 0.0f },
-    glm::vec3{ -0.5f, -0.5f, 0.0f },
-    glm::vec3{ -0.5f, -0.5f, 0.0f },
+    glm::vec3{  0.5f, -0.5f, 0.0f },
+    glm::vec3{  0.0f,  0.5f, 0.0f },
 };
 
 static constexpr auto colors = std::array{
@@ -96,6 +96,7 @@ int main(int argc, char* argv[]) {
             .build(*engine, *swapChain);
 
         const auto shaderInstance = shader->createInstance(*engine);
+        shaderInstance->setDescriptorData(0, uniformBuffer, *engine);
 
         // The render loop
         context->loop([] {});

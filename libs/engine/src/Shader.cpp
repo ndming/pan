@@ -22,9 +22,9 @@ ShaderInstance* Shader::createInstance(const Engine& engine) const {
     const auto device = engine.getNativeDevice();
 
     // Count how many descriptor of each type in this pipeline
-    auto descriptorTypeNumbers = std::unordered_map<vk::DescriptorType, int>{};
+    auto descriptorTypeNumbers = std::unordered_map<vk::DescriptorType, uint32_t>{};
     for (const auto binding : _descriptorBindings) {
-        descriptorTypeNumbers[binding.descriptorType] += 1;
+        descriptorTypeNumbers[binding.descriptorType] += binding.descriptorCount;
     }
 
     // Create a descriptor pool

@@ -9,6 +9,9 @@
 #include <vector>
 
 
+class Engine;
+class UniformBuffer;
+
 class ShaderInstance {
     friend class Shader;
 
@@ -16,7 +19,10 @@ public:
     ShaderInstance(const ShaderInstance&) = delete;
     ShaderInstance& operator=(const ShaderInstance&) = delete;
 
-    void setPushConstantData(uint32_t index, void* data);
+    void setPushConstantData(uint32_t index, const void* data);
+
+    void setDescriptorData(uint32_t binding, const UniformBuffer* uniformBuffer, const Engine& engine) const;
+    void setDescriptorData(uint32_t binding, const std::vector<const UniformBuffer*>& uniformBuffers, const Engine& engine) const;
 
     [[nodiscard]] const Shader* getShader() const;
 
@@ -32,6 +38,6 @@ private:
     const Shader* _shader;
     vk::DescriptorPool _descriptorPool;
 
-    std::vector<void*> _pushConstantValues;
+    std::vector<const void*> _pushConstantValues;
     std::array<vk::DescriptorSet, Renderer::getMaxFramesInFlight()> _descriptorSets;
 };

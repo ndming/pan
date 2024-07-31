@@ -29,7 +29,7 @@ UniformBuffer* UniformBuffer::Builder::build(const Engine& engine) const {
 }
 
 UniformBuffer::UniformBuffer(
-    const vk::DeviceSize bufferSize, const vk::Buffer& buffer, void* const allocation, std::byte* const pMappedData
+    const std::size_t bufferSize, const vk::Buffer& buffer, void* const allocation, std::byte* const pMappedData
 ) : Buffer{ buffer, allocation, pMappedData }, _bufferSize{ bufferSize } {
 }
 
@@ -46,4 +46,8 @@ void UniformBuffer::setBufferData(const void* const data) const {
     for (uint32_t index = 0; index < Renderer::getMaxFramesInFlight(); ++index) {
         setBufferData(index, data);
     }
+}
+
+std::size_t UniformBuffer::getBufferSize() const {
+    return _bufferSize;
 }

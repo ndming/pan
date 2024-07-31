@@ -1,4 +1,6 @@
 #include "engine/ShaderInstance.h"
+#include "engine/Engine.h"
+#include "engine/UniformBuffer.h"
 
 #include <plog/Log.h>
 
@@ -14,12 +16,49 @@ ShaderInstance::ShaderInstance(
     _descriptorSets{ descriptorSets } {
 }
 
-void ShaderInstance::setPushConstantData(const uint32_t index, void* const data) {
+void ShaderInstance::setPushConstantData(const uint32_t index, const void* const data) {
     if (index > _pushConstantValues.size()) {
         PLOGE << "Received out-of-bound push constant index: " << index;
         throw std::invalid_argument("Index of push constant data is out of bound");
     }
     _pushConstantValues[index] = data;
+}
+
+void ShaderInstance::setDescriptorData(const uint32_t binding, const UniformBuffer* const uniformBuffer, const Engine& engine) const {
+    const auto device = engine.getNativeDevice();
+
+    for (uint32_t i = 0; i < Renderer::getMaxFramesInFlight(); ++i) {
+        const auto bufferInfo = vk::DescriptorBufferInfo{
+            uniformBuffer->getNativeBuffer(), i * uniformBuffer->getBufferSize(), uniformBuffer->getBufferSize() };
+
+        const auto descriptorWrites = std::array{
+            vk::WriteDescriptorSet{ _descriptorSets[i], binding, 0, 1, vk::DescriptorType::eUniformBuffer, {}, &bufferInfo },
+        };
+
+        device.updateDescriptorSets(descriptorWrites, {});
+    }
+}
+
+void ShaderInstance::setDescriptorData(
+    const uint32_t binding,
+    const std::vector<const UniformBuffer*>& uniformBuffers,
+    const Engine &engine
+) const {
+    const auto device = engine.getNativeDevice();
+
+    for (uint32_t i = 0; i < Renderer::getMaxFramesInFlight(); ++i) {
+        auto bufferInfos = std::vector<vk::DescriptorBufferInfo>{};
+        for (const auto buffer : uniformBuffers) {
+            bufferInfos.emplace_back(buffer->getNativeBuffer(), i * buffer->getBufferSize(), buffer->getBufferSize());
+        }
+        const auto descriptorWrites = std::array{
+            vk::WriteDescriptorSet{
+                _descriptorSets[i], binding, 0, static_cast<uint32_t>(uniformBuffers.size()),
+                vk::DescriptorType::eUniformBuffer, {}, bufferInfos.data() },
+        };
+
+        device.updateDescriptorSets(descriptorWrites, {});
+    }
 }
 
 const Shader* ShaderInstance::getShader() const {
