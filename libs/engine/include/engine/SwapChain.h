@@ -16,6 +16,8 @@ public:
     SwapChain(const SwapChain&) = delete;
     SwapChain& operator=(const SwapChain&) = delete;
 
+    [[nodiscard]] float getCurrentAspect() const;
+
     [[nodiscard]] vk::RenderPass getNativeRenderPass() const;
     [[nodiscard]] vk::SampleCountFlagBits getNativeSampleCount() const;
     [[nodiscard]] vk::SampleCountFlagBits getNativeMaxUsableSampleCount() const;

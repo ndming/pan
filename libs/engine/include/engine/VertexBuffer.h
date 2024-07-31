@@ -77,6 +77,13 @@ enum class AttributeFormat {
 };
 
 
+/**
+ * Represents a dedicated GPU buffer object for vertex data. A VertexBuffer can have a single binding containing
+ * interleaved vertex data, or multiple bindings, each contain a certain number of vertex attributes. Both binding
+ * and attribute information shall be specified through the VertexBuffer::Builder class. Regardless of which
+ * binding scheme is used, there will only be a single native buffer object created internally to promote cache
+ * locality. In the case of multiple bindings, the class use offset values internally to manage them.
+ */
 class VertexBuffer final : public Buffer {
 public:
     class Builder {
@@ -128,7 +135,7 @@ public:
     };
 
     /**
-     * Transfer vertex data to this buffer at the binding.The operation is synchronous and the transfer is guaranteed
+     * Transfer vertex data to this buffer at the binding. The operation is synchronous and the transfer is guaranteed
      * to complete when the function returns.
      *
      * @param binding The binding to set buffer data.
@@ -146,9 +153,8 @@ private:
        std::vector<vk::VertexInputAttributeDescription>&& attributes,
        std::vector<vk::DeviceSize>&& offsets,
        int vertexCount,
-       std::size_t bufferSize,
-       vk::BufferUsageFlags usage,
-       const Engine& engine);
+       const vk::Buffer& buffer,
+       void* allocation);
 
     std::vector<vk::VertexInputBindingDescription> _bindingDescriptions;
     std::vector<vk::VertexInputAttributeDescription> _attributeDescriptions;

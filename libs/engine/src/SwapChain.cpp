@@ -401,6 +401,10 @@ void SwapChain::cleanup(const vk::Device& device) const noexcept {
     device.destroySwapchainKHR(_swapChain);
 }
 
+float SwapChain::getCurrentAspect() const {
+    return static_cast<float>(_imageExtent.width) /  static_cast<float>(_imageExtent.height);
+}
+
 vk::RenderPass SwapChain::getNativeRenderPass() const {
     return _renderPass;
 }

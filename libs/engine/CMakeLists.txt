@@ -14,6 +14,7 @@ set(SRCS
         src/Shader.cpp
         src/ShaderInstance.cpp
         src/SwapChain.cpp
+        src/UniformBuffer.cpp
         src/VertexBuffer.cpp
         src/allocator/ResourceAllocator.cpp
         src/allocator/VmaUsage.cpp

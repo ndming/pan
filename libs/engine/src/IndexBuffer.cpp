@@ -1,4 +1,7 @@
 #include "engine/IndexBuffer.h"
+#include "engine/Engine.h"
+
+#include "allocator/ResourceAllocator.h"
 
 
 IndexBuffer::Builder & IndexBuffer::Builder::indexCount(const int count) {
@@ -12,16 +15,18 @@ IndexBuffer::Builder & IndexBuffer::Builder::indexType(const IndexType type) {
 }
 
 IndexBuffer* IndexBuffer::Builder::build(const Engine& engine) const {
-    // Construct an IndexBuffer object
+    // Calculate the buffer size
     const auto bufferSize = getSize(_indexType) * _indexCount;
+    // We must be able to transfer data down to this buffer from the CPU, hence the transfer dst flag
+    constexpr auto usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+
+    // Allocate a dedicated buffer in the GPU
+    const auto allocator = engine.getResourceAllocator();
+    auto allocation = VmaAllocation{};
+    const auto buffer = allocator->allocateDedicatedBuffer(bufferSize, usage, &allocation);
 
     return new IndexBuffer{
-        static_cast<uint32_t>(_indexCount),
-        getIndexType(_indexType),
-        bufferSize,
-        vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        engine
-    };
+        static_cast<uint32_t>(_indexCount), getIndexType(_indexType), bufferSize, buffer, allocation };
 }
 
 std::size_t IndexBuffer::Builder::getSize(const IndexType type) {
@@ -44,9 +49,9 @@ IndexBuffer::IndexBuffer(
     const uint32_t indexCount,
     const vk::IndexType indexType,
     const std::size_t bufferSize,
-    const vk::BufferUsageFlags usage,
-    const Engine& engine
-) : Buffer{ bufferSize, usage, engine },
+    const vk::Buffer& buffer,
+    void* const allocation
+) : Buffer{ buffer, allocation },
     _indexCount{ indexCount },
     _indexType{ indexType },
     _bufferSize{ bufferSize } {

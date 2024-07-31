@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include <array>
 #include <cstdint>
 #include <vector>
 

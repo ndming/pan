@@ -39,8 +39,8 @@ private:
         uint32_t indexCount,
         vk::IndexType indexType,
         std::size_t bufferSize,
-        vk::BufferUsageFlags usage,
-        const Engine& engine);
+        const vk::Buffer& buffer,
+        void* allocation);
 
     uint32_t _indexCount;
     vk::IndexType _indexType;

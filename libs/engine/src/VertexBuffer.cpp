@@ -1,6 +1,8 @@
 #include "engine/VertexBuffer.h"
 #include "engine/Engine.h"
 
+#include "allocator/ResourceAllocator.h"
+
 #include <plog/Log.h>
 
 #include <format>
@@ -73,18 +75,19 @@ VertexBuffer* VertexBuffer::Builder::build(const Engine& engine) {
         offsets[i + 1] = vk::DeviceSize{ offsets[i] + _vertexCount * _bindings[i].stride };
     }
 
-    // Calculate the buffer total size and construct a VertexBuffer object
+    // Calculate the buffer total size
     const auto bufferSize = std::ranges::fold_left(
         _bindings, 0, [this](const auto accum, const auto& it) { return accum + it.stride * _vertexCount; });
+    // We must be able to transfer data down to this buffer from the CPU, hence the transfer dst flag
+    constexpr auto usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+
+    // Allocate a dedicated buffer in the GPU
+    const auto allocator = engine.getResourceAllocator();
+    auto allocation = VmaAllocation{};
+    const auto buffer = allocator->allocateDedicatedBuffer(bufferSize, usage, &allocation);
+
     return new VertexBuffer{
-        std::move(_bindings),
-        std::move(_attributes),
-        std::move(offsets),
-        _vertexCount,
-        bufferSize,
-        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        engine
-    };
+        std::move(_bindings), std::move(_attributes), std::move(offsets), _vertexCount, buffer, allocation };
 }
 
 VertexBuffer::VertexBuffer(
@@ -92,10 +95,9 @@ VertexBuffer::VertexBuffer(
     std::vector<vk::VertexInputAttributeDescription>&& attributes,
     std::vector<vk::DeviceSize>&& offsets,
     const int vertexCount,
-    const std::size_t bufferSize,
-    const vk::BufferUsageFlags usage,
-    const Engine& engine
-) : Buffer{ bufferSize, usage, engine },
+    const vk::Buffer& buffer,
+    void* const allocation
+) : Buffer{ buffer, allocation },
     _bindingDescriptions{ std::move(bindings) },
     _attributeDescriptions{ attributes },
     _offsets{ std::move(offsets) },

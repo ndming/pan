@@ -12,12 +12,9 @@ void* Buffer::getAllocation() const {
     return _allocation;
 }
 
-Buffer::Buffer(const std::size_t bufferSize, const vk::BufferUsageFlags usage, const Engine &engine) {
-    const auto allocator = engine.getResourceAllocator();
-    auto allocation = VmaAllocation{};
-
-    _buffer = allocator->allocateDeviceBuffer(bufferSize, static_cast<VkBufferUsageFlags>(usage), &allocation);
-    _allocation = allocation;
+Buffer::Buffer(
+    const vk::Buffer& buffer, void* const allocation, std::byte* const pMappedData
+) : _buffer{ buffer }, _allocation{ allocation }, _pMappedData{ pMappedData } {
 }
 
 void Buffer::transferBufferData(

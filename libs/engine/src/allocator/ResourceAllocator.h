@@ -28,8 +28,11 @@ public:
 
     void destroyImage(const vk::Image& image, VmaAllocation allocation) const noexcept;
 
-    vk::Buffer allocateDeviceBuffer(std::size_t bufferSize, VkBufferUsageFlags usage, VmaAllocation* allocation) const;
+    vk::Buffer allocateDedicatedBuffer(std::size_t bufferSize, vk::BufferUsageFlags usage, VmaAllocation* allocation) const;
     vk::Buffer allocateStagingBuffer(std::size_t bufferSize, VmaAllocation* allocation) const;
+
+    vk::Buffer allocatePersistentBuffer(
+        std::size_t bufferSize, vk::BufferUsageFlags usage, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
 
     void destroyBuffer(const vk::Buffer& buffer, VmaAllocation allocation) const noexcept;
 

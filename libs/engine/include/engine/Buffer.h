@@ -2,6 +2,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include <cstddef>
+
 
 class Engine;
 
@@ -16,9 +18,11 @@ public:
     virtual ~Buffer() = default;
 
 protected:
-    Buffer(std::size_t bufferSize, vk::BufferUsageFlags usage, const Engine& engine);
+    Buffer(const vk::Buffer& buffer, void* allocation, std::byte* pMappedData = nullptr);
 
     void transferBufferData(std::size_t bufferSize, const void* data, vk::DeviceSize offset, const Engine& engine) const;
+
+    std::byte* _pMappedData;
 
 private:
     static [[nodiscard]] vk::CommandBuffer beginSingleTimeTransferCommands(const Engine& engine);

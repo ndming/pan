@@ -1,5 +1,7 @@
 #pragma once
 
+#include "engine/ShaderInstance.h"
+
 #include <vulkan/vulkan.hpp>
 #include <plog/Log.h>
 
@@ -11,7 +13,6 @@
 
 
 class Engine;
-class ShaderInstance;
 
 
 enum class DescriptorType {
