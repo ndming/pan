@@ -6,10 +6,12 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <vector>
 
 
 class Engine;
+class ShaderInstance;
 
 
 enum class DescriptorType {
@@ -55,6 +57,14 @@ public:
         virtual ~Builder() = default;
 
     protected:
+        std::unique_ptr<Shader> buildShader(
+            const vk::DescriptorSetLayout& descriptorSetLayout,
+            const vk::PipelineLayout& pipelineLayout,
+            const vk::Pipeline& pipeline) {
+            return std::unique_ptr<Shader>(new Shader{
+                descriptorSetLayout, pipelineLayout, pipeline, std::move(_descriptorBindings), std::move(_pushConstants) });
+        }
+
         [[nodiscard]] static std::vector<char> readShaderFile(const std::filesystem::path& path) {
             // Reading from the end of the file as binary format
             auto file = std::ifstream{ path.string() + ".spv", std::ios::ate | std::ios::binary };
@@ -105,18 +115,25 @@ public:
 
     virtual ~Shader() = default;
 
+    [[nodiscard]] ShaderInstance* createInstance(const Engine& engine) const;
+
     [[nodiscard]] vk::DescriptorSetLayout getNativeDescriptorSetLayout() const;
     [[nodiscard]] vk::PipelineLayout getNativePipelineLayout() const;
     [[nodiscard]] vk::Pipeline getNativePipeline() const;
+    [[nodiscard]] const std::vector<vk::PushConstantRange>& getNativePushConstantRanges() const;
 
-protected:
+private:
     Shader(
         const vk::DescriptorSetLayout& descriptorSetLayout,
         const vk::PipelineLayout& pipelineLayout,
-        const vk::Pipeline& pipeline);
+        const vk::Pipeline& pipeline,
+        std::vector<vk::DescriptorSetLayoutBinding>&& descriptorBindings,
+        std::vector<vk::PushConstantRange>&& pushConstants);
 
-private:
-    vk::DescriptorSetLayout _descriptorSetLayout{};
-    vk::PipelineLayout _pipelineLayout{};
-    vk::Pipeline _pipeline{};
+    vk::DescriptorSetLayout _descriptorSetLayout;
+    vk::PipelineLayout _pipelineLayout;
+    vk::Pipeline _pipeline;
+
+    std::vector<vk::DescriptorSetLayoutBinding> _descriptorBindings;
+    std::vector<vk::PushConstantRange> _pushConstants;
 };

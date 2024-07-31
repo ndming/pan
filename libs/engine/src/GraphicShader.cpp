@@ -121,12 +121,5 @@ std::unique_ptr<Shader> GraphicShader::Builder::build(const Engine& engine, cons
     device.destroyShaderModule(fragShaderModule);
     device.destroyShaderModule(vertShaderModule);
 
-    return std::unique_ptr<Shader>(new GraphicShader(descriptorSetLayout, pipelineLayout, pipeline));
-}
-
-GraphicShader::GraphicShader(
-    const vk::DescriptorSetLayout& descriptorSetLayout,
-    const vk::PipelineLayout& pipelineLayout,
-    const vk::Pipeline& pipeline
-) : Shader{ descriptorSetLayout, pipelineLayout, pipeline } {
+    return buildShader(descriptorSetLayout, pipelineLayout, pipeline);
 }

@@ -1,4 +1,5 @@
 #include "engine/Engine.h"
+#include "engine/ShaderInstance.h"
 
 #include "allocator/ResourceAllocator.h"
 
@@ -225,6 +226,11 @@ void Engine::destroyShader(std::unique_ptr<Shader>& shader) const noexcept {
     _device.destroyPipelineLayout(shader->getNativePipelineLayout());
     _device.destroyDescriptorSetLayout(shader->getNativeDescriptorSetLayout());
     shader.reset(nullptr);
+}
+
+void Engine::destroyShaderInstance(const ShaderInstance* const instance) const noexcept {
+    _device.destroyDescriptorPool(instance->getNativeDescriptorPool());
+    delete instance;
 }
 
 

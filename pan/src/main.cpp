@@ -75,6 +75,8 @@ int main(int argc, char* argv[]) {
             .fragmentShader("shaders/shader.frag")
             .build(*engine, *swapChain);
 
+        const auto shaderInstance = shader->createInstance(*engine);
+
         // The render loop
         context->loop([] {});
 
@@ -83,6 +85,7 @@ int main(int argc, char* argv[]) {
         engine->waitIdle();
 
         // Destroy all rendering resources
+        engine->destroyShaderInstance(shaderInstance);
         engine->destroyShader(shader);
         engine->destroyBuffer(indexBuffer);
         engine->destroyBuffer(vertexBuffer);

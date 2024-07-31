@@ -1,12 +1,12 @@
 #pragma once
 
-#include <cstdint>
-
-#include <vulkan/vulkan.hpp>
-
-#include "engine/SwapChain.h"
-
 
 class Renderer {
+public:
+    static constexpr int getMaxFramesInFlight() {
+        return MAX_FRAMES_IN_FLIGHT;
+    }
 
+private:
+    static constexpr auto MAX_FRAMES_IN_FLIGHT = 2;
 };

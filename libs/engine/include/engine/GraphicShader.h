@@ -30,9 +30,5 @@ public:
 
     };
 
-private:
-    GraphicShader(
-        const vk::DescriptorSetLayout& descriptorSetLayout,
-        const vk::PipelineLayout& pipelineLayout,
-        const vk::Pipeline& pipeline);
+    GraphicShader() = delete;
 };

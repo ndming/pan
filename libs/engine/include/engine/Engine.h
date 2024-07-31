@@ -2,6 +2,7 @@
 
 #include "engine/Context.h"
 #include "engine/Buffer.h"
+#include "engine/Renderer.h"
 #include "engine/Shader.h"
 #include "engine/SwapChain.h"
 
@@ -29,6 +30,7 @@ public:
     void destroyBuffer(const Buffer* buffer) const noexcept;
 
     void destroyShader(std::unique_ptr<Shader>& shader) const noexcept;
+    void destroyShaderInstance(const ShaderInstance* instance) const noexcept;
 
     void waitIdle() const;
 

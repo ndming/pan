@@ -12,6 +12,7 @@ set(SRCS
         src/Renderer.cpp
         src/Scene.cpp
         src/Shader.cpp
+        src/ShaderInstance.cpp
         src/SwapChain.cpp
         src/VertexBuffer.cpp
         src/allocator/ResourceAllocator.cpp
