@@ -1,7 +1,5 @@
 #pragma once
 
-#include "engine/ShaderInstance.h"
-
 #include <vulkan/vulkan.hpp>
 #include <plog/Log.h>
 
@@ -13,6 +11,7 @@
 
 
 class Engine;
+class ShaderInstance;
 
 
 enum class DescriptorType {
@@ -44,12 +43,12 @@ public:
         }
 
         T& descriptor(const uint32_t binding, const DescriptorType type, const uint32_t count, const Stage stage) {
-            _descriptorBindings[binding] = { binding, getDescriptorType(type), count, getShaderStage(stage) };
+            _descriptorBindings[binding] = { binding, getDescriptorType(type), count, getNativeShaderStage(stage) };
             return *static_cast<T*>(this);
         }
 
         T& pushConstantRange(const Stage stage, const uint32_t byteOffset, const uint32_t byteSize) {
-            _pushConstants.emplace_back(getShaderStage(stage), byteOffset, byteSize);
+            _pushConstantRanges.emplace_back(getNativeShaderStage(stage), byteOffset, byteSize);
             return *static_cast<T*>(this);
         }
 
@@ -60,8 +59,7 @@ public:
             const vk::DescriptorSetLayout& descriptorSetLayout,
             const vk::PipelineLayout& pipelineLayout,
             const vk::Pipeline& pipeline) {
-            return std::unique_ptr<Shader>(new Shader{
-                descriptorSetLayout, pipelineLayout, pipeline, std::move(_descriptorBindings), std::move(_pushConstants) });
+            return std::unique_ptr<Shader>(new Shader{ descriptorSetLayout, pipelineLayout, pipeline, std::move(_descriptorBindings) });
         }
 
         [[nodiscard]] static std::vector<char> readShaderFile(const std::filesystem::path& path) {
@@ -85,7 +83,7 @@ public:
         }
 
         std::vector<vk::DescriptorSetLayoutBinding> _descriptorBindings{};
-        std::vector<vk::PushConstantRange> _pushConstants{};
+        std::vector<vk::PushConstantRange> _pushConstantRanges{};
 
     private:
         static vk::DescriptorType getDescriptorType(const DescriptorType type) {
@@ -96,15 +94,6 @@ public:
                 case Sampler:              return vk::DescriptorType::eSampler;
                 case CombinedImageSampler: return vk::DescriptorType::eCombinedImageSampler;
                 default: throw std::invalid_argument("Unsupported descriptor type");
-            }
-        }
-
-        static vk::ShaderStageFlags getShaderStage(const Stage stage) {
-            switch (stage) {
-                case Stage::Vertex:   return vk::ShaderStageFlagBits::eVertex;
-                case Stage::Fragment: return vk::ShaderStageFlagBits::eFragment;
-                case Stage::Compute:  return vk::ShaderStageFlagBits::eCompute;
-                default: throw std::invalid_argument("Unsupported shader stage");
             }
         }
     };
@@ -119,20 +108,19 @@ public:
     [[nodiscard]] vk::DescriptorSetLayout getNativeDescriptorSetLayout() const;
     [[nodiscard]] vk::PipelineLayout getNativePipelineLayout() const;
     [[nodiscard]] vk::Pipeline getNativePipeline() const;
-    [[nodiscard]] const std::vector<vk::PushConstantRange>& getNativePushConstantRanges() const;
+    [[nodiscard]] static vk::ShaderStageFlags getNativeShaderStage(Stage stage);
 
 private:
     Shader(
         const vk::DescriptorSetLayout& descriptorSetLayout,
         const vk::PipelineLayout& pipelineLayout,
         const vk::Pipeline& pipeline,
-        std::vector<vk::DescriptorSetLayoutBinding>&& descriptorBindings,
-        std::vector<vk::PushConstantRange>&& pushConstants);
+        std::vector<vk::DescriptorSetLayoutBinding>&& descriptorBindings);
 
     vk::DescriptorSetLayout _descriptorSetLayout;
     vk::PipelineLayout _pipelineLayout;
     vk::Pipeline _pipeline;
 
+    // We need binding information to create ShaderInstance
     std::vector<vk::DescriptorSetLayoutBinding> _descriptorBindings;
-    std::vector<vk::PushConstantRange> _pushConstants;
 };

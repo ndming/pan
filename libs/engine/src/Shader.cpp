@@ -1,4 +1,5 @@
 #include "engine/Shader.h"
+#include "engine/ShaderInstance.h"
 #include "engine/Engine.h"
 
 #include <ranges>
@@ -9,13 +10,11 @@ Shader::Shader(
     const vk::DescriptorSetLayout& descriptorSetLayout,
     const vk::PipelineLayout& pipelineLayout,
     const vk::Pipeline& pipeline,
-    std::vector<vk::DescriptorSetLayoutBinding>&& descriptorBindings,
-    std::vector<vk::PushConstantRange>&& pushConstants
+    std::vector<vk::DescriptorSetLayoutBinding>&& descriptorBindings
 ) : _descriptorSetLayout{ descriptorSetLayout },
     _pipelineLayout{ pipelineLayout },
     _pipeline{ pipeline },
-    _descriptorBindings{ std::move(descriptorBindings) },
-    _pushConstants{ std::move(pushConstants) } {
+    _descriptorBindings{ std::move(descriptorBindings) } {
 }
 
 ShaderInstance* Shader::createInstance(const Engine& engine) const {
@@ -45,10 +44,11 @@ ShaderInstance* Shader::createInstance(const Engine& engine) const {
         descriptorPool, static_cast<uint32_t>(Renderer::getMaxFramesInFlight()), layouts.data() };
     const auto descriptorSetVector = device.allocateDescriptorSets(allocInfo);
 
+    // Convert descriptor sets to an array
     auto descriptorSets = std::array<vk::DescriptorSet, Renderer::getMaxFramesInFlight()>{};
     std::ranges::copy_n(descriptorSetVector.begin(), Renderer::getMaxFramesInFlight(), descriptorSets.begin());
 
-    return new ShaderInstance{ this, descriptorPool, _pushConstants.size(), descriptorSets };
+    return new ShaderInstance{ this, descriptorPool, descriptorSets };
 }
 
 vk::DescriptorSetLayout Shader::getNativeDescriptorSetLayout() const {
@@ -63,6 +63,11 @@ vk::Pipeline Shader::getNativePipeline() const {
     return _pipeline;
 }
 
-const std::vector<vk::PushConstantRange> & Shader::getNativePushConstantRanges() const {
-    return _pushConstants;
+vk::ShaderStageFlags Shader::getNativeShaderStage(const Stage stage) {
+    switch (stage) {
+        case Stage::Vertex:   return vk::ShaderStageFlagBits::eVertex;
+        case Stage::Fragment: return vk::ShaderStageFlagBits::eFragment;
+        case Stage::Compute:  return vk::ShaderStageFlagBits::eCompute;
+        default: throw std::invalid_argument("Unsupported shader stage");
+    }
 }

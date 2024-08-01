@@ -48,7 +48,7 @@ std::unique_ptr<Shader> GraphicShader::Builder::build(const Engine& engine, cons
     const auto descriptorSetLayout = device.createDescriptorSetLayout(
         { {}, static_cast<uint32_t>(_descriptorBindings.size()), _descriptorBindings.data() });
     const auto pipelineLayout = device.createPipelineLayout(
-        { {}, 1, &descriptorSetLayout, static_cast<uint32_t>(_pushConstants.size()), _pushConstants.data() });
+        { {}, 1, &descriptorSetLayout, static_cast<uint32_t>(_pushConstantRanges.size()), _pushConstantRanges.data() });
 
     // A graphics pipeline must have a vertex shader and a fragment shader
     if (_vertShaderCode.empty() || _fragShaderCode.empty()) {
@@ -147,7 +147,7 @@ bool GraphicShader::Builder::checkPushConstantSizeLimit(const uint32_t psLimit) 
     const auto withinLimit = [&psLimit](const vk::PushConstantRange& range) {
         return range.offset + range.size <= psLimit;
     };
-    return std::ranges::all_of(_pushConstants, withinLimit);
+    return std::ranges::all_of(_pushConstantRanges, withinLimit);
 }
 
 template<> struct std::hash<vk::ShaderStageFlags> {
@@ -162,7 +162,7 @@ bool operator==(const vk::ShaderStageFlags& lhs, const vk::ShaderStageFlags& rhs
 
 bool GraphicShader::Builder::checkPushConstantValidity() const {
     auto seenFlags = std::unordered_set<vk::ShaderStageFlags>{};
-    for (const auto& range : _pushConstants) {
+    for (const auto& range : _pushConstantRanges) {
         if (seenFlags.contains(range.stageFlags)) {
             // Duplicate found
             return false;

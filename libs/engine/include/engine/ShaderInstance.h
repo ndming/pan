@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/Renderer.h"
+#include "engine/Shader.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -19,7 +20,7 @@ public:
     ShaderInstance(const ShaderInstance&) = delete;
     ShaderInstance& operator=(const ShaderInstance&) = delete;
 
-    void setPushConstantData(uint32_t index, const void* data);
+    void setPushConstantData(Shader::Stage stage, uint32_t byteOffset, uint32_t byteSize, const void* data);
 
     void setDescriptorData(uint32_t binding, const UniformBuffer* uniformBuffer, const Engine& engine) const;
 
@@ -31,12 +32,13 @@ public:
 
 private:
     ShaderInstance(
-        const Shader* shader, const vk::DescriptorPool& descriptorPool, std::size_t pushConstantCount,
+        const Shader* shader,
+        const vk::DescriptorPool& descriptorPool,
         const std::array<vk::DescriptorSet, Renderer::getMaxFramesInFlight()>& descriptorSets);
 
     const Shader* _shader;
     vk::DescriptorPool _descriptorPool;
 
-    std::vector<const void*> _pushConstantValues;
     std::array<vk::DescriptorSet, Renderer::getMaxFramesInFlight()> _descriptorSets;
+    std::vector<vk::PushConstantsInfoKHR> _pushConstantInfos{};
 };
