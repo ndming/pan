@@ -215,6 +215,15 @@ void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
 }
 
 
+Renderer* Engine::createRenderer() const {
+    return nullptr;
+}
+
+void Engine::destroyRenderer(Renderer* const renderer) const noexcept {
+
+}
+
+
 void Engine::destroyBuffer(const Buffer* const buffer) const noexcept {
     _allocator->destroyBuffer(buffer->getNativeBuffer(), static_cast<VmaAllocation>(buffer->getAllocation()));
     delete buffer;

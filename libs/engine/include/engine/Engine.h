@@ -3,7 +3,7 @@
 #include "engine/Context.h"
 #include "engine/Buffer.h"
 #include "engine/Renderer.h"
-#include "engine/Shader.h"
+#include "engine/ShaderInstance.h"
 #include "engine/SwapChain.h"
 
 #include <memory>
@@ -26,6 +26,9 @@ public:
 
     [[nodiscard]] SwapChain* createSwapChain() const;
     void destroySwapChain(SwapChain* swapChain) const noexcept;
+
+    [[nodiscard]] Renderer* createRenderer() const;
+    void destroyRenderer(Renderer* renderer) const noexcept;
 
     void destroyBuffer(const Buffer* buffer) const noexcept;
 
