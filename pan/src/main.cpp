@@ -80,10 +80,10 @@ int main(int argc, char* argv[]) {
         auto ubo = UniformBufferObject{};
         ubo.model = rotate(glm::mat4(1.0f), glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
         ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.proj = glm::perspective(glm::radians(45.0f), swapChain->getCurrentAspect(), 0.1f, 10.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), swapChain->getAspectRatio(), 0.1f, 10.0f);
 
         const auto uniformBuffer = UniformBuffer::Builder()
-            .bufferByteSize(sizeof(UniformBufferObject))
+            .dataByteSize(sizeof(UniformBufferObject))
             .build(*engine);
         uniformBuffer->setBufferData(&ubo);
 
@@ -91,6 +91,8 @@ int main(int argc, char* argv[]) {
             .descriptorCount(2)
             .descriptor(0, DescriptorType::UniformBuffer, 1, Shader::Stage::Vertex)
             .descriptor(1, DescriptorType::CombinedImageSampler, 1, Shader::Stage::Fragment)
+            .pushConstantRange(Shader::Stage::Vertex, 0, 64)
+            .pushConstantRange(Shader::Stage::Fragment, 16, 32)
             .vertexShader("shaders/shader.vert")
             .fragmentShader("shaders/shader.frag")
             .build(*engine, *swapChain);

@@ -4,18 +4,19 @@
 
 #include <plog/Log.h>
 
-#include <array>
+#include <ranges>
+#include <unordered_set>
 
 
 GraphicShader::Builder& GraphicShader::Builder::vertexShader(const std::filesystem::path& path, std::string entryPoint) {
-    _vertexShaderCode = readShaderFile(path);
-    _vertexShaderEntryPoint = std::move(entryPoint);
+    _vertShaderCode = readShaderFile(path);
+    _vertShaderEntryPoint = std::move(entryPoint);
     return *this;
 }
 
 GraphicShader::Builder& GraphicShader::Builder::fragmentShader(const std::filesystem::path& path, std::string entryPoint) {
-    _fragmentShaderCode = readShaderFile(path);
-    _fragmentShaderEntryPoint = std::move(entryPoint);
+    _fragShaderCode = readShaderFile(path);
+    _fragShaderEntryPoint = std::move(entryPoint);
     return *this;
 }
 
@@ -31,22 +32,40 @@ GraphicShader::Builder & GraphicShader::Builder::minSampleShading(const float sa
 std::unique_ptr<Shader> GraphicShader::Builder::build(const Engine& engine, const SwapChain& swapChain) {
     const auto device = engine.getNativeDevice();
 
+    // Ensure that the specified push constants are within the device's limit
+    if (const auto psLimit = engine.getLimitPushConstantSize(); !checkPushConstantSizeLimit(psLimit)) {
+        PLOGE << "Detected a push constant range whose size exceeds " << psLimit << " bytes";
+        throw std::runtime_error("Push constant range (offset + size) must be less than the allowed limit");
+    }
+
+    // Each shader stage should only have one push constant block
+    if (!checkPushConstantValidity()) {
+        PLOGE << "Detected multiple push constant ranges in a shader stage";
+        throw std::runtime_error("Each shader stage is allowed to only have one push constant range");
+    }
+
     // Descriptor set layout and pipeline layout
     const auto descriptorSetLayout = device.createDescriptorSetLayout(
         { {}, static_cast<uint32_t>(_descriptorBindings.size()), _descriptorBindings.data() });
     const auto pipelineLayout = device.createPipelineLayout(
         { {}, 1, &descriptorSetLayout, static_cast<uint32_t>(_pushConstants.size()), _pushConstants.data() });
 
+    // A graphics pipeline must have a vertex shader and a fragment shader
+    if (_vertShaderCode.empty() || _fragShaderCode.empty()) {
+        PLOGE << "Creating a graphics pipeline with empty vertex/fragment shader";
+        throw std::runtime_error("A graphics pipeline must have a vertex shader and a fragment shader");
+    }
+
     // Shader modules and shader stages
     const auto vertShaderModule = device.createShaderModule(
-        { {}, _vertexShaderCode.size(), reinterpret_cast<const uint32_t*>(_vertexShaderCode.data()) });
+        { {}, _vertShaderCode.size(), reinterpret_cast<const uint32_t*>(_vertShaderCode.data()) });
     const auto fragShaderModule = device.createShaderModule(
-        { {}, _fragmentShaderCode.size(), reinterpret_cast<const uint32_t*>(_fragmentShaderCode.data()) });
+        { {}, _fragShaderCode.size(), reinterpret_cast<const uint32_t*>(_fragShaderCode.data()) });
     const auto shaderStages = std::array{
         vk::PipelineShaderStageCreateInfo{
-            {}, vk::ShaderStageFlagBits::eVertex, vertShaderModule, _vertexShaderEntryPoint.data(), nullptr },
+            {}, vk::ShaderStageFlagBits::eVertex, vertShaderModule, _vertShaderEntryPoint.data(), nullptr },
         vk::PipelineShaderStageCreateInfo{
-            {}, vk::ShaderStageFlagBits::eFragment, fragShaderModule, _fragmentShaderEntryPoint.data(), nullptr },
+            {}, vk::ShaderStageFlagBits::eFragment, fragShaderModule, _fragShaderEntryPoint.data(), nullptr },
     };
 
     // These properties by default must be able to change at runtime
@@ -122,4 +141,33 @@ std::unique_ptr<Shader> GraphicShader::Builder::build(const Engine& engine, cons
     device.destroyShaderModule(vertShaderModule);
 
     return buildShader(descriptorSetLayout, pipelineLayout, pipeline);
+}
+
+bool GraphicShader::Builder::checkPushConstantSizeLimit(const uint32_t psLimit) const {
+    const auto withinLimit = [&psLimit](const vk::PushConstantRange& range) {
+        return range.offset + range.size <= psLimit;
+    };
+    return std::ranges::all_of(_pushConstants, withinLimit);
+}
+
+template<> struct std::hash<vk::ShaderStageFlags> {
+    size_t operator()(const vk::ShaderStageFlags& stageFlags) const noexcept {
+        return std::hash<VkFlags>()(static_cast<VkFlags>(stageFlags));
+    }
+};
+
+bool operator==(const vk::ShaderStageFlags& lhs, const vk::ShaderStageFlags& rhs) {
+    return static_cast<VkFlags>(lhs) == static_cast<VkFlags>(rhs);
+}
+
+bool GraphicShader::Builder::checkPushConstantValidity() const {
+    auto seenFlags = std::unordered_set<vk::ShaderStageFlags>{};
+    for (const auto& range : _pushConstants) {
+        if (seenFlags.contains(range.stageFlags)) {
+            // Duplicate found
+            return false;
+        }
+        seenFlags.insert(range.stageFlags);
+    }
+    return true;
 }

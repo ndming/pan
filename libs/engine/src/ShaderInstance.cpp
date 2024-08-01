@@ -29,32 +29,13 @@ void ShaderInstance::setDescriptorData(const uint32_t binding, const UniformBuff
 
     for (uint32_t i = 0; i < Renderer::getMaxFramesInFlight(); ++i) {
         const auto bufferInfo = vk::DescriptorBufferInfo{
-            uniformBuffer->getNativeBuffer(), i * uniformBuffer->getBufferSize(), uniformBuffer->getBufferSize() };
+            uniformBuffer->getNativeBuffer(),
+            i * uniformBuffer->getBufferSize(),  // byte offset to the buffer for the i-th frame
+            uniformBuffer->getDataSize()         // we are actually binding a subset of this buffer portion
+        };
 
         const auto descriptorWrites = std::array{
             vk::WriteDescriptorSet{ _descriptorSets[i], binding, 0, 1, vk::DescriptorType::eUniformBuffer, {}, &bufferInfo },
-        };
-
-        device.updateDescriptorSets(descriptorWrites, {});
-    }
-}
-
-void ShaderInstance::setDescriptorData(
-    const uint32_t binding,
-    const std::vector<const UniformBuffer*>& uniformBuffers,
-    const Engine &engine
-) const {
-    const auto device = engine.getNativeDevice();
-
-    for (uint32_t i = 0; i < Renderer::getMaxFramesInFlight(); ++i) {
-        auto bufferInfos = std::vector<vk::DescriptorBufferInfo>{};
-        for (const auto buffer : uniformBuffers) {
-            bufferInfos.emplace_back(buffer->getNativeBuffer(), i * buffer->getBufferSize(), buffer->getBufferSize());
-        }
-        const auto descriptorWrites = std::array{
-            vk::WriteDescriptorSet{
-                _descriptorSets[i], binding, 0, static_cast<uint32_t>(uniformBuffers.size()),
-                vk::DescriptorType::eUniformBuffer, {}, bufferInfos.data() },
         };
 
         device.updateDescriptorSets(descriptorWrites, {});

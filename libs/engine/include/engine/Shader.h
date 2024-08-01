@@ -48,10 +48,8 @@ public:
             return *static_cast<T*>(this);
         }
 
-        T& pushConstant(const Stage stage, const uint32_t byteSize) {
-            const auto offset = _pushConstants.empty() ? 0 : _pushConstants.back().offset + _pushConstants.back().size;
-            _pushConstants.emplace_back(getShaderStage(stage), offset, byteSize);
-
+        T& pushConstantRange(const Stage stage, const uint32_t byteOffset, const uint32_t byteSize) {
+            _pushConstants.emplace_back(getShaderStage(stage), byteOffset, byteSize);
             return *static_cast<T*>(this);
         }
 

@@ -22,7 +22,6 @@ public:
     void setPushConstantData(uint32_t index, const void* data);
 
     void setDescriptorData(uint32_t binding, const UniformBuffer* uniformBuffer, const Engine& engine) const;
-    void setDescriptorData(uint32_t binding, const std::vector<const UniformBuffer*>& uniformBuffers, const Engine& engine) const;
 
     [[nodiscard]] const Shader* getShader() const;
 

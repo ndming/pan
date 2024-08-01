@@ -242,6 +242,14 @@ const EngineFeature & Engine::getEngineFeature() const {
     return _feature;
 }
 
+uint32_t Engine::getLimitPushConstantSize() const {
+    return _swapChain->_physicalDevice.getProperties().limits.maxPushConstantsSize;
+}
+
+uint32_t Engine::getLimitMinUniformBufferOffsetAlignment() const {
+    return _swapChain->_physicalDevice.getProperties().limits.minUniformBufferOffsetAlignment;
+}
+
 vk::Device Engine::getNativeDevice() const {
     return _device;
 }

@@ -20,11 +20,14 @@ public:
         [[nodiscard]] std::unique_ptr<Shader> build(const Engine& engine, const SwapChain& swapChain);
 
     private:
-        std::vector<char> _vertexShaderCode{};
-        std::string _vertexShaderEntryPoint{};
+        [[nodiscard]] bool checkPushConstantSizeLimit(uint32_t psLimit) const;
+        [[nodiscard]] bool checkPushConstantValidity() const;
 
-        std::vector<char> _fragmentShaderCode{};
-        std::string _fragmentShaderEntryPoint{};
+        std::vector<char> _vertShaderCode{};
+        std::string _vertShaderEntryPoint{};
+
+        std::vector<char> _fragShaderCode{};
+        std::string _fragShaderEntryPoint{};
 
         float _minSampleShading{ .0f };
 
