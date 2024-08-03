@@ -9,7 +9,7 @@ class Composable;
 
 class Scene final {
 public:
-    static [[nodiscard]] std::unique_ptr<Scene> create();
+    [[nodiscard]] static std::unique_ptr<Scene> create();
 
     void insert(const std::shared_ptr<Composable>& composable);
     void remove(const std::shared_ptr<Composable>& composable);

@@ -109,10 +109,10 @@ std::vector<vk::CommandBuffer> Drawable::recordDrawingCommands(
     // and they would be returned to the renderer. For a Drawable, we won't be using any secondary command buffers,
     // but it's possible that this Composable has a ShadingGroup child and we will have to accumulate its buffers.
     auto buffers = std::vector<vk::CommandBuffer>{};
-    for (const auto composable : _children) {
+    for (const auto& composable : _children) {
         auto childBuffers = composable->recordDrawingCommands(
             frameIndex, commandBuffer, onPipelineBound, cameraMatrix, mvp.transform);
-        buffers.insert_range(buffers.end(), std::move(childBuffers));
+        buffers.insert(buffers.end(), std::make_move_iterator(childBuffers.begin()), std::make_move_iterator(childBuffers.end()));
     }
     return buffers;
 }

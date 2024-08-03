@@ -18,6 +18,7 @@ public:
 
     [[nodiscard]] float getAspectRatio() const;
 
+    [[nodiscard]] vk::Extent2D getNativeSwapImageExtent() const;
     [[nodiscard]] vk::RenderPass getNativeRenderPass() const;
     [[nodiscard]] vk::SampleCountFlagBits getNativeSampleCount() const;
     [[nodiscard]] vk::SampleCountFlagBits getNativeMaxUsableSampleCount() const;

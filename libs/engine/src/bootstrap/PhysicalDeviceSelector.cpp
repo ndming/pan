@@ -65,16 +65,13 @@ bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice& devic
 
     device.getFeatures2(&supportedFeatures);
 
-    if (feature.depthClamp && !(basicFeatures.depthClamp && extendedDynamicState3Features.extendedDynamicState3DepthClampEnable)) {
-        return false;
-    }
-    if (feature.largePoints && !basicFeatures.largePoints) {
+    if (!basicFeatures.largePoints) {
         return false;
     }
     if (feature.sampleShading && !basicFeatures.sampleRateShading) {
         return false;
     }
-    if (feature.wideLines && !basicFeatures.wideLines) {
+    if (!basicFeatures.wideLines) {
         return false;
     }
     if (!vertexInputDynamicStateFeatures.vertexInputDynamicState || !extendedDynamicStateFeatures.extendedDynamicState ||

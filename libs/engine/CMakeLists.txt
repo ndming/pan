@@ -19,6 +19,7 @@ set(SRCS
         src/Transformable.cpp
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp
+        src/View.cpp
         src/allocator/ResourceAllocator.cpp
         src/allocator/VmaUsage.cpp
         src/bootstrap/DebugMessenger.cpp
@@ -33,6 +34,7 @@ add_library(${TARGET} STATIC)
 set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 23 CXX_EXTENSIONS OFF COMPILE_WARNING_AS_ERROR ON)
 target_sources(${TARGET} PRIVATE ${SRCS})
 target_compile_definitions(${TARGET} PUBLIC GLFW_INCLUDE_NONE)
+target_compile_definitions(${TARGET} PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE)
 
 # Where to look for header files
 target_include_directories(${TARGET} PUBLIC include)

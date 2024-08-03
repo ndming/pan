@@ -7,7 +7,8 @@
 #include <engine/GraphicShader.h>
 #include <engine/IndexBuffer.h>
 #include <engine/VertexBuffer.h>
-#include <engine/UniformBuffer.h>
+#include <engine/Scene.h>
+#include <engine/View.h>
 
 #include <glm/glm.hpp>
 
@@ -49,8 +50,9 @@ int main(int argc, char* argv[]) {
         // Create an engine
         const auto engine = Engine::create(context->getSurface());
 
-        // Create a swap chain
+        // Create a swap chain and a view
         const auto swapChain = engine->createSwapChain();
+        const auto view = View::create(*swapChain);
 
         const auto vertexBuffer = VertexBuffer::Builder(2)
             .vertexCount(vertices.size())
@@ -74,6 +76,8 @@ int main(int argc, char* argv[]) {
             .build(*engine, *swapChain);
 
         const auto shaderInstance = shader->createInstance(*engine);
+
+        const auto scene = Scene::create();
 
         // The render loop
         context->loop([] {});

@@ -21,7 +21,7 @@ public:
     [[nodiscard]] bool attached() const noexcept;
     [[nodiscard]] bool hasChild(const std::shared_ptr<Composable>& child) const noexcept;
 
-    virtual [[nodiscard]] std::vector<vk::CommandBuffer> recordDrawingCommands(
+    [[nodiscard]] virtual std::vector<vk::CommandBuffer> recordDrawingCommands(
         uint32_t frameIndex,
         const vk::CommandBuffer& commandBuffer,
         const std::function<void(const vk::CommandBuffer&)>& onPipelineBound,

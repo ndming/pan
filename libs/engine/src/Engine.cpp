@@ -127,17 +127,10 @@ Engine::Engine(GLFWwindow* const window, const EngineFeature& feature) {
 vk::PhysicalDeviceFeatures2 Engine::getPhysicalDeviceFeatures(const EngineFeature& feature) {
     // Basic features
     auto basicFeatures = vk::PhysicalDeviceFeatures{};
-    if (feature.depthClamp) {
-        basicFeatures.depthClamp = vk::True;
-    }
-    if (feature.largePoints) {
-        basicFeatures.largePoints = vk::True;
-    }
+    basicFeatures.largePoints = vk::True;  // explicitly required by the Engine
+    basicFeatures.wideLines = vk::True;    // explicitly required by the Engine
     if (feature.sampleShading) {
         basicFeatures.sampleRateShading = vk::True;
-    }
-    if (feature.wideLines) {
-        basicFeatures.wideLines = vk::True;
     }
 
     // Vertex input dynamic state features
@@ -155,9 +148,6 @@ vk::PhysicalDeviceFeatures2 Engine::getPhysicalDeviceFeatures(const EngineFeatur
     // Extended dynamic state 3 features
     auto extendedDynamicState3Features = new vk::PhysicalDeviceExtendedDynamicState3FeaturesEXT{};
     extendedDynamicState3Features->extendedDynamicState3PolygonMode = vk::True;  // explicitly required by the Engine
-    if (feature.depthClamp) {
-        extendedDynamicState3Features->extendedDynamicState3DepthClampEnable = vk::True;
-    }
 
     // Any update to this feature chain must also get updated in the PhysicalDeviceSelector::checkFeatureSupport method
     auto deviceFeatures = vk::PhysicalDeviceFeatures2{};

@@ -355,6 +355,10 @@ float SwapChain::getAspectRatio() const {
     return static_cast<float>(_imageExtent.width) /  static_cast<float>(_imageExtent.height);
 }
 
+vk::Extent2D SwapChain::getNativeSwapImageExtent() const {
+    return _imageExtent;
+}
+
 vk::RenderPass SwapChain::getNativeRenderPass() const {
     return _renderPass;
 }

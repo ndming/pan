@@ -25,7 +25,7 @@ protected:
     std::byte* _pMappedData;
 
 private:
-    static [[nodiscard]] vk::CommandBuffer beginSingleTimeTransferCommands(const Engine& engine);
+    [[nodiscard]] static vk::CommandBuffer beginSingleTimeTransferCommands(const Engine& engine);
     static void endSingleTimeTransferCommands(const vk::CommandBuffer &commandBuffer, const Engine& engine);
 
     vk::Buffer _buffer;

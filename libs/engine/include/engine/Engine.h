@@ -12,12 +12,11 @@
 
 class ResourceAllocator;
 
+
 struct EngineFeature {
-    bool depthClamp{ false };
-    bool largePoints{ false };
     bool sampleShading{ false };
-    bool wideLines{ false };
 }; // Any update to this struct requires an asscoiate update to the getPhysicalDeviceFeatures method
+
 
 class Engine final {
 public:

@@ -83,9 +83,11 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
         eViewport,                  // vk::PipelineViewportStateCreateInfo
         eScissor,                   // ...
         ePrimitiveTopology,         // vk::PipelineInputAssemblyStateCreateInfo
+        ePrimitiveRestartEnable,    // ...
         ePolygonModeEXT,            // vk::PipelineRasterizationStateCreateInfo
         eCullMode,                  // ...
         eFrontFace,                 // ...
+        eLineWidth,
         // TODO: add support for depth test
         // eDepthTestEnable,           // vk::PipelineDepthStencilStateCreateInfo
         // eDepthWriteEnable,          // ...
@@ -102,30 +104,20 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
     constexpr auto inputAssembly = vk::PipelineInputAssemblyStateCreateInfo{};
 
     // While others depend on the requested features
-    const auto [depthClamp, msaa, largePoints, sampleShading, wideLines] = engine.getEngineFeature();
+    const auto [sampleShading] = engine.getEngineFeature();
 
     // Rasterization
     auto rasterizer = vk::PipelineRasterizationStateCreateInfo{};
     rasterizer.lineWidth = 1.0f;
-    if (depthClamp) {
-        dynamicStates.push_back(eDepthClampEnableEXT);
-        rasterizer.depthClampEnable = vk::True;
-    }
-    if (wideLines) {
-        dynamicStates.push_back(eLineWidth);
-    }
+    rasterizer.depthClampEnable = vk::False;
 
     // Multisampling options
-    if (msaa) {
-        dynamicStates.push_back(eRasterizationSamplesEXT);
-    }
     if (!sampleShading && _minSampleShading > 0.0f) {
         PLOGW << "Using min sample shading without having enabled it: "
                  "enable this feature via EngineFeature during Engine creation";
     }
     const auto multisampling = vk::PipelineMultisampleStateCreateInfo{
-        {}, msaa ? vk::SampleCountFlagBits::e1 : swapChain.getNativeSampleCount(),
-        sampleShading, _minSampleShading, nullptr, vk::False, vk::False };
+        {}, swapChain.getNativeSampleCount(), sampleShading, _minSampleShading, nullptr, vk::False, vk::False };
 
     // TODO: enable depth test
     constexpr auto depthStencil = vk::PipelineDepthStencilStateCreateInfo{  {}, vk::False, vk::False };
