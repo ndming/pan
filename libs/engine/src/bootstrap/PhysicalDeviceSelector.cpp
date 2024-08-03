@@ -71,9 +71,6 @@ bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice& devic
     if (feature.largePoints && !basicFeatures.largePoints) {
         return false;
     }
-    if (feature.msaa && !extendedDynamicState3Features.extendedDynamicState3RasterizationSamples) {
-        return false;
-    }
     if (feature.sampleShading && !basicFeatures.sampleRateShading) {
         return false;
     }

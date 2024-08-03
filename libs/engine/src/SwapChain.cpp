@@ -81,13 +81,10 @@ SwapChain::SwapChain(
     const auto properties = _physicalDevice.getProperties();
     PLOGI << "Found a suitable device: " << properties.deviceName.data();
 
-    if (feature.msaa) {
-        // We need to check if the device even supports MSAA
-        if (getNativeMaxUsableSampleCount() == vk::SampleCountFlagBits::e1) {
-            PLOGE << "Using a device with no MSAA support when enabling MSAA";
-            throw std::runtime_error("The device must support at least x2 MSAA");
-        }
-        _msaaSamples = vk::SampleCountFlagBits::e2;
+    // Check if the device supports MSAA
+    if (getNativeMaxUsableSampleCount() == vk::SampleCountFlagBits::e1) {
+        PLOGE << "Using a device with no MSAA support when enabling MSAA";
+        throw std::runtime_error("The device must support at least 4x MSAA");
     }
 }
 
@@ -193,17 +190,55 @@ void SwapChain::createColorResources(const vk::Device& device) {
 }
 
 void SwapChain::createRenderPass(const vk::Device& device) {
-    if (_msaaSamples == vk::SampleCountFlagBits::e1) {
-        createRenderPassWithoutMSAA(device);
-    } else {
-        createRenderPassWithMSAA(device);
-    }
+    const auto colorAttachment = vk::AttachmentDescription{
+        {}, _imageFormat, _msaaSamples,
+        vk::AttachmentLoadOp::eClear,   // clear the framebuffer to black before drawing a new frame
+        vk::AttachmentStoreOp::eStore,  // rendered contents will be stored in memory to be resolved later
+        vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eDontCare,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eColorAttachmentOptimal
+    };
+    const auto colorAttachmentResolve = vk::AttachmentDescription{
+        {}, _imageFormat, vk::SampleCountFlagBits::e1,
+        vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eStore,    // resolved contents will be stored in memory to be presented later
+        vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eDontCare,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::ePresentSrcKHR   // we want the image to be ready for presentation after rendering
+    };
+
+    const auto attachments = std::array{ colorAttachment, colorAttachmentResolve };
+
+    static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
+    // Instruct the render pass to resolve multisampled color image into regular attachment
+    static constexpr auto colorAttachmentResolveRef = vk::AttachmentReference{ 1, vk::ImageLayout::eColorAttachmentOptimal };
+
+    constexpr auto subpass = vk::SubpassDescription{
+        {}, vk::PipelineBindPoint::eGraphics,
+        {}, {},
+        1, &colorAttachmentRef,
+        &colorAttachmentResolveRef    // let the render pass define a multisample resolve operation
+    };
+
+    constexpr auto dependency = vk::SubpassDependency{
+        vk::SubpassExternal,  // src subpass
+        0,                    // dst subpass
+        vk::PipelineStageFlagBits::eColorAttachmentOutput,  // src stage
+        vk::PipelineStageFlagBits::eColorAttachmentOutput,  // dst stage
+        vk::AccessFlagBits::eColorAttachmentWrite,  // src access
+        vk::AccessFlagBits::eColorAttachmentWrite,  // dst access
+    };
+
+    const auto renderPassInfo = vk::RenderPassCreateInfo{
+        {}, static_cast<uint32_t>(attachments.size()), attachments.data(), 1, &subpass, 1, &dependency };
+    _renderPass = device.createRenderPass(renderPassInfo);
 }
 
 void SwapChain::createFramebuffers(const vk::Device& device) {
     const auto toFramebuffer = [this, &device](const auto& swapChainImageView) {
-        const auto attachments = _msaaSamples == vk::SampleCountFlagBits::e1 ?
-            std::vector{ swapChainImageView } : std::vector{ _colorImageView, swapChainImageView };
+        const auto attachments = std::vector{ _colorImageView, swapChainImageView };
         const auto framebufferInfo = vk::FramebufferCreateInfo{
             {}, _renderPass,
             static_cast<uint32_t>(attachments.size()), attachments.data(),
@@ -276,89 +311,7 @@ vk::Extent2D SwapChain::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capab
     return actualExtent;
 }
 
-void SwapChain::createRenderPassWithoutMSAA(const vk::Device& device) {
-    const auto colorAttachment = vk::AttachmentDescription{
-        {}, _imageFormat, vk::SampleCountFlagBits::e1,
-        vk::AttachmentLoadOp::eClear,    // clear the framebuffer to black before drawing a new frame
-        vk::AttachmentStoreOp::eStore,   // rendered contents will be stored in memory to be presented later
-        vk::AttachmentLoadOp::eDontCare,
-        vk::AttachmentStoreOp::eDontCare,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::ePresentSrcKHR  // we want the image to be ready for presentation after rendering
-    };
-
-    const auto attachments = std::array{ colorAttachment };
-
-    static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
-
-    constexpr auto subpass = vk::SubpassDescription{
-        {}, vk::PipelineBindPoint::eGraphics,
-        {}, {},
-        1, &colorAttachmentRef,
-    };
-
-    constexpr auto dependency = vk::SubpassDependency{
-        vk::SubpassExternal,  // src subpass
-        0,                    // dst subpass
-        vk::PipelineStageFlagBits::eColorAttachmentOutput,  // src stage
-        vk::PipelineStageFlagBits::eColorAttachmentOutput,  // dst stage
-        static_cast<vk::AccessFlagBits>(0),         // src access
-        vk::AccessFlagBits::eColorAttachmentWrite,  // dst access
-    };
-
-    const auto renderPassInfo = vk::RenderPassCreateInfo{
-        {}, static_cast<uint32_t>(attachments.size()), attachments.data(), 1, &subpass, 1, &dependency };
-    _renderPass = device.createRenderPass(renderPassInfo);
-}
-
-void SwapChain::createRenderPassWithMSAA(const vk::Device& device) {
-    const auto colorAttachment = vk::AttachmentDescription{
-        {}, _imageFormat, _msaaSamples,
-        vk::AttachmentLoadOp::eClear,   // clear the framebuffer to black before drawing a new frame
-        vk::AttachmentStoreOp::eStore,  // rendered contents will be stored in memory to be resolved later
-        vk::AttachmentLoadOp::eDontCare,
-        vk::AttachmentStoreOp::eDontCare,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eColorAttachmentOptimal
-    };
-    const auto colorAttachmentResolve = vk::AttachmentDescription{
-        {}, _imageFormat, vk::SampleCountFlagBits::e1,
-        vk::AttachmentLoadOp::eDontCare,
-        vk::AttachmentStoreOp::eStore,    // resolved contents will be stored in memory to be presented later
-        vk::AttachmentLoadOp::eDontCare,
-        vk::AttachmentStoreOp::eDontCare,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::ePresentSrcKHR   // we want the image to be ready for presentation after rendering
-    };
-
-    const auto attachments = std::array{ colorAttachment, colorAttachmentResolve };
-
-    static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
-    // Instruct the render pass to resolve multisampled color image into regular attachment
-    static constexpr auto colorAttachmentResolveRef = vk::AttachmentReference{ 1, vk::ImageLayout::eColorAttachmentOptimal };
-
-    constexpr auto subpass = vk::SubpassDescription{
-        {}, vk::PipelineBindPoint::eGraphics,
-        {}, {},
-        1, &colorAttachmentRef,
-        &colorAttachmentResolveRef    // let the render pass define a multisample resolve operation
-    };
-
-    constexpr auto dependency = vk::SubpassDependency{
-        vk::SubpassExternal,  // src subpass
-        0,                    // dst subpass
-        vk::PipelineStageFlagBits::eColorAttachmentOutput,  // src stage
-        vk::PipelineStageFlagBits::eColorAttachmentOutput,  // dst stage
-        vk::AccessFlagBits::eColorAttachmentWrite,  // src access
-        vk::AccessFlagBits::eColorAttachmentWrite,  // dst access
-    };
-
-    const auto renderPassInfo = vk::RenderPassCreateInfo{
-        {}, static_cast<uint32_t>(attachments.size()), attachments.data(), 1, &subpass, 1, &dependency };
-    _renderPass = device.createRenderPass(renderPassInfo);
-}
-
-void SwapChain::recreate(const vk::Device& device, const vk::SampleCountFlagBits msaa) {
+void SwapChain::recreate(const vk::Device& device) {
     // We won't recreate while the window is being minimized
     int width = 0, height = 0;
     glfwGetFramebufferSize(_window, &width, &height);
@@ -370,9 +323,6 @@ void SwapChain::recreate(const vk::Device& device, const vk::SampleCountFlagBits
     // Before cleaning, we shouldn’t touch resources that may still be in use
     device.waitIdle();
     cleanup(device);
-
-    // Changing MSAA samples affect the render pass, color resources, and potentially the framebuffers
-    _msaaSamples = msaa;
 
     createSwapChain(device);
     createImageViews(device);

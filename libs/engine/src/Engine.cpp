@@ -158,9 +158,6 @@ vk::PhysicalDeviceFeatures2 Engine::getPhysicalDeviceFeatures(const EngineFeatur
     if (feature.depthClamp) {
         extendedDynamicState3Features->extendedDynamicState3DepthClampEnable = vk::True;
     }
-    if (feature.msaa) {
-        extendedDynamicState3Features->extendedDynamicState3RasterizationSamples = vk::True;
-    }
 
     // Any update to this feature chain must also get updated in the PhysicalDeviceSelector::checkFeatureSupport method
     auto deviceFeatures = vk::PhysicalDeviceFeatures2{};

@@ -43,10 +43,8 @@ private:
     [[nodiscard]] static SurfaceFormat chooseSwapSurfaceFormat(const std::vector<SurfaceFormat>& availableFormats);
     [[nodiscard]] static PresentMode chooseSwapPresentMode(const std::vector<PresentMode>& availablePresentModes);
     [[nodiscard]] static vk::Extent2D chooseSwapExtent(const SurfaceCapabilities& capabilities, GLFWwindow* window);
-    void createRenderPassWithoutMSAA(const vk::Device& device);
-    void createRenderPassWithMSAA(const vk::Device& device);
 
-    void recreate(const vk::Device& device, vk::SampleCountFlagBits msaa);
+    void recreate(const vk::Device& device);
     void cleanup(const vk::Device& device) const noexcept;
 
     GLFWwindow* _window;
@@ -82,7 +80,11 @@ private:
     // use for each of them and how their contents should be handled throughout the rendering operations. All of this
     // information is wrapped in a render pass object.
     vk::RenderPass _renderPass{};
-    vk::SampleCountFlagBits _msaaSamples{ vk::SampleCountFlagBits::e1 };
+
+    // The default (and only) MSAA level is 4x MSAA which is particularly efficient in tiler architectures where
+    // the multi-sampled attachment is resolved in tile memory and can therefore be transient. Given that most devices
+    // now support MSAA, we either go with 4x MSAA or we don't go at all (throw exception)
+    vk::SampleCountFlagBits _msaaSamples{ vk::SampleCountFlagBits::e4 };
 
     // The attachments specified during render pass creation are bound by wrapping them into a VkFramebuffer object.
     // The image that we have to use for the attachment depends on which image the swap chain returns when we retrieve

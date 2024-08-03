@@ -14,7 +14,6 @@ class ResourceAllocator;
 
 struct EngineFeature {
     bool depthClamp{ false };
-    bool msaa{ false };
     bool largePoints{ false };
     bool sampleShading{ false };
     bool wideLines{ false };
