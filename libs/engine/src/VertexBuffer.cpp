@@ -91,19 +91,31 @@ VertexBuffer* VertexBuffer::Builder::build(const Engine& engine) {
 }
 
 VertexBuffer::VertexBuffer(
-    std::vector<vk::VertexInputBindingDescription>&& bindings,
-    std::vector<vk::VertexInputAttributeDescription>&& attributes,
+    std::vector<vk::VertexInputBindingDescription2EXT>&& bindings,
+    std::vector<vk::VertexInputAttributeDescription2EXT>&& attributes,
     std::vector<vk::DeviceSize>&& offsets,
     const int vertexCount,
     const vk::Buffer& buffer,
     void* const allocation
 ) : Buffer{ buffer, allocation },
     _bindingDescriptions{ std::move(bindings) },
-    _attributeDescriptions{ attributes },
+    _attributeDescriptions{ std::move(attributes) },
     _offsets{ std::move(offsets) },
     _vertexCount{ vertexCount } {
 }
 
 void VertexBuffer::setBindingData(const uint32_t binding, const void* const data, const Engine& engine) const {
     transferBufferData(_vertexCount * _bindingDescriptions[binding].stride, data, _offsets[binding], engine);
+}
+
+const std::vector<vk::VertexInputBindingDescription2EXT>& VertexBuffer::getBindingDescriptions() const {
+    return _bindingDescriptions;
+}
+
+const std::vector<vk::VertexInputAttributeDescription2EXT>& VertexBuffer::getAttributeDescriptions() const {
+    return _attributeDescriptions;
+}
+
+const std::vector<vk::DeviceSize>& VertexBuffer::getOffsets() const {
+    return _offsets;
 }

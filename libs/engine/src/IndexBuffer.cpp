@@ -60,3 +60,11 @@ IndexBuffer::IndexBuffer(
 void IndexBuffer::setData(const void* const data, const Engine& engine) const {
     transferBufferData(_bufferSize, data, 0, engine);
 }
+
+uint32_t IndexBuffer::getIndexCount() const {
+    return _indexCount;
+}
+
+vk::IndexType IndexBuffer::getNativeIndexType() const {
+    return _indexType;
+}

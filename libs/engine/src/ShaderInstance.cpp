@@ -12,16 +12,6 @@ ShaderInstance::ShaderInstance(
     _descriptorSets{ descriptorSets } {
 }
 
-void ShaderInstance::setPushConstantData(
-    const Shader::Stage stage,
-    const uint32_t byteOffset,
-    const uint32_t byteSize,
-    const void* data
-) {
-    _pushConstantInfos.emplace_back(
-        _shader->getNativePipelineLayout(), Shader::getNativeShaderStage(stage), byteOffset, byteSize, data);
-}
-
 void ShaderInstance::setDescriptorData(const uint32_t binding, const UniformBuffer* const uniformBuffer, const Engine& engine) const {
     const auto device = engine.getNativeDevice();
 
@@ -48,10 +38,10 @@ vk::DescriptorPool ShaderInstance::getNativeDescriptorPool() const {
     return _descriptorPool;
 }
 
-vk::DescriptorSet ShaderInstance::getNativeDescriptorSetAt(const uint32_t frame) const {
+const vk::DescriptorSet& ShaderInstance::getNativeDescriptorSetAt(const uint32_t frame) const {
     return _descriptorSets[frame];
 }
 
-const std::array<vk::DescriptorSet, Renderer::getMaxFramesInFlight()> & ShaderInstance::getNativeDescriptorSets() const {
+const std::array<vk::DescriptorSet, Renderer::getMaxFramesInFlight()>& ShaderInstance::getNativeDescriptorSets() const {
     return _descriptorSets;
 }

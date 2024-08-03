@@ -1,7 +1,8 @@
 #pragma once
 
-#include "engine/Context.h"
 #include "engine/Buffer.h"
+#include "engine/Context.h"
+#include "engine/Composable.h"
 #include "engine/Renderer.h"
 #include "engine/ShaderInstance.h"
 #include "engine/SwapChain.h"
@@ -32,7 +33,7 @@ public:
 
     void destroyBuffer(const Buffer* buffer) const noexcept;
 
-    void destroyShader(std::unique_ptr<Shader>& shader) const noexcept;
+    void destroyShader(const Shader* shader) const noexcept;
     void destroyShaderInstance(const ShaderInstance* instance) const noexcept;
 
     void waitIdle() const;

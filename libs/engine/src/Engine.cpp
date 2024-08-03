@@ -106,7 +106,8 @@ Engine::Engine(GLFWwindow* const window, const EngineFeature& feature) {
         .build(_swapChain->_physicalDevice);
 
     // We need a transfer queue and a transfer command pool to transfer image and buffer data. Any queue family
-    // with VK_QUEUE_GRAPHICS_BIT capabilities already implicitly support VK_QUEUE_TRANSFER_BIT operations.
+    // with VK_QUEUE_GRAPHICS_BIT capabilities already supports VK_QUEUE_TRANSFER_BIT operations implicitly.
+    // We specify the eTransient flag because memory transfer operations involve using short-lived buffers.
     _transferQueue = _device.getQueue(_swapChain->_graphicsFamily.value(), 0);
     const auto transferPoolInfo = vk::CommandPoolCreateInfo{
         vk::CommandPoolCreateFlagBits::eTransient, _swapChain->_graphicsFamily.value() };
@@ -229,11 +230,11 @@ void Engine::destroyBuffer(const Buffer* const buffer) const noexcept {
     delete buffer;
 }
 
-void Engine::destroyShader(std::unique_ptr<Shader>& shader) const noexcept {
+void Engine::destroyShader(const Shader* const shader) const noexcept {
     _device.destroyPipeline(shader->getNativePipeline());
     _device.destroyPipelineLayout(shader->getNativePipelineLayout());
     _device.destroyDescriptorSetLayout(shader->getNativeDescriptorSetLayout());
-    shader.reset(nullptr);
+    delete shader;
 }
 
 void Engine::destroyShaderInstance(const ShaderInstance* const instance) const noexcept {

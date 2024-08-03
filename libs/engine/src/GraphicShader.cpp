@@ -2,6 +2,7 @@
 #include "engine/Engine.h"
 #include "engine/SwapChain.h"
 
+#include <glm/glm.hpp>
 #include <plog/Log.h>
 
 #include <ranges>
@@ -29,8 +30,15 @@ GraphicShader::Builder & GraphicShader::Builder::minSampleShading(const float sa
     return *this;
 }
 
-std::unique_ptr<Shader> GraphicShader::Builder::build(const Engine& engine, const SwapChain& swapChain) {
+Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swapChain) {
     const auto device = engine.getNativeDevice();
+
+    // Add the pre-defined push constant range for our camera and transform components to the vertex shader:
+    // layout(push_constant, std430) uniform MVP {
+    //     mat4 cameraMat;
+    //     mat4 transform;
+    // } mvp;
+    pushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(glm::mat4) * 2);
 
     // Ensure that the specified push constants are within the device's limit
     if (const auto psLimit = engine.getLimitPushConstantSize(); !checkPushConstantSizeLimit(psLimit)) {

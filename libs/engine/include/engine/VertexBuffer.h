@@ -79,10 +79,10 @@ enum class AttributeFormat {
 
 /**
  * Represents a dedicated GPU buffer object for vertex data. A VertexBuffer can have a single binding containing
- * interleaved vertex data, or multiple bindings, each contain a certain number of vertex attributes. Both binding
- * and attribute information shall be specified through the VertexBuffer::Builder class. Regardless of which
- * binding scheme is used, there will only be a single native buffer object created internally to promote cache
- * locality. In the case of multiple bindings, the class use offset values internally to manage them.
+ * interleaved vertex data, or multiple bindings, each contains a single or certain number of vertex attributes.
+ * Both binding and attribute information shall be specified through the VertexBuffer::Builder class. Regardless of
+ * which binding scheme is used, there will only be a single native buffer object created internally to promote
+ * cache locality. In the case of multiple bindings, the class use offset values internally to manage them.
  */
 class VertexBuffer final : public Buffer {
 public:
@@ -127,10 +127,10 @@ public:
     private:
         static vk::Format getFormat(AttributeFormat format);
 
-        std::vector<vk::VertexInputAttributeDescription> _attributes{};
+        std::vector<vk::VertexInputAttributeDescription2EXT> _attributes{};
         int _vertexCount{ 0 };
 
-        std::vector<vk::VertexInputBindingDescription> _bindings{};
+        std::vector<vk::VertexInputBindingDescription2EXT> _bindings{};
         int _bindingCount{ 0 };
     };
 
@@ -144,20 +144,24 @@ public:
      */
     void setBindingData(uint32_t binding, const void* data, const Engine& engine) const;
 
+    [[nodiscard]] const std::vector<vk::VertexInputBindingDescription2EXT>& getBindingDescriptions() const;
+    [[nodiscard]] const std::vector<vk::VertexInputAttributeDescription2EXT>& getAttributeDescriptions() const;
+    [[nodiscard]] const std::vector<vk::DeviceSize>& getOffsets() const;
+
     VertexBuffer(const VertexBuffer&) = delete;
     VertexBuffer& operator=(const VertexBuffer&) = delete;
 
 private:
     VertexBuffer(
-       std::vector<vk::VertexInputBindingDescription>&& bindings,
-       std::vector<vk::VertexInputAttributeDescription>&& attributes,
+       std::vector<vk::VertexInputBindingDescription2EXT>&& bindings,
+       std::vector<vk::VertexInputAttributeDescription2EXT>&& attributes,
        std::vector<vk::DeviceSize>&& offsets,
        int vertexCount,
        const vk::Buffer& buffer,
        void* allocation);
 
-    std::vector<vk::VertexInputBindingDescription> _bindingDescriptions;
-    std::vector<vk::VertexInputAttributeDescription> _attributeDescriptions;
+    std::vector<vk::VertexInputBindingDescription2EXT> _bindingDescriptions;
+    std::vector<vk::VertexInputAttributeDescription2EXT> _attributeDescriptions;
     std::vector<vk::DeviceSize> _offsets;
 
     int _vertexCount;

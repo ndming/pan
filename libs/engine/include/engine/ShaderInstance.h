@@ -20,14 +20,12 @@ public:
     ShaderInstance(const ShaderInstance&) = delete;
     ShaderInstance& operator=(const ShaderInstance&) = delete;
 
-    void setPushConstantData(Shader::Stage stage, uint32_t byteOffset, uint32_t byteSize, const void* data);
-
     void setDescriptorData(uint32_t binding, const UniformBuffer* uniformBuffer, const Engine& engine) const;
 
     [[nodiscard]] const Shader* getShader() const;
 
     [[nodiscard]] vk::DescriptorPool getNativeDescriptorPool() const;
-    [[nodiscard]] vk::DescriptorSet getNativeDescriptorSetAt(uint32_t frame) const;
+    [[nodiscard]] const vk::DescriptorSet& getNativeDescriptorSetAt(uint32_t frame) const;
     [[nodiscard]] const std::array<vk::DescriptorSet, Renderer::getMaxFramesInFlight()>& getNativeDescriptorSets() const;
 
 private:
@@ -40,5 +38,4 @@ private:
     vk::DescriptorPool _descriptorPool;
 
     std::array<vk::DescriptorSet, Renderer::getMaxFramesInFlight()> _descriptorSets;
-    std::vector<vk::PushConstantsInfoKHR> _pushConstantInfos{};
 };

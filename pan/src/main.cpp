@@ -10,7 +10,6 @@
 #include <engine/UniformBuffer.h>
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 
 struct Vertex {
@@ -20,8 +19,8 @@ struct Vertex {
 
 static constexpr auto vertices = std::array{
     Vertex{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } },
-    Vertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f } },
-    Vertex{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 0.0f } },
+    Vertex{ {  0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f } },
+    Vertex{ {  0.0f,  0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 0.0f } },
 };
 
 static constexpr auto positions = std::array{
@@ -34,14 +33,6 @@ static constexpr auto colors = std::array{
     glm::vec4{ 1.0f, 0.0f, 0.0f, 0.0f },
     glm::vec4{ 0.0f, 1.0f, 0.0f, 0.0f },
     glm::vec4{ 0.0f, 0.0f, 1.0f, 0.0f },
-};
-
-struct UniformBufferObject {
-    // Even with GLM_FORCE_DEFAULT_ALIGNED_GENTYPES, align requirements could break down if we start using nested
-    // structures. These gotchas are a good reason to always be explicit about alignment.
-    alignas(16) glm::mat4 model;
-    alignas(16) glm::mat4 view;
-    alignas(16) glm::mat4 proj;
 };
 
 static constexpr auto indices = std::array<uint16_t, 3>{ 0, 1, 2 };
@@ -77,28 +68,12 @@ int main(int argc, char* argv[]) {
             .build(*engine);
         indexBuffer->setData(indices.data(), *engine);
 
-        auto ubo = UniformBufferObject{};
-        ubo.model = rotate(glm::mat4(1.0f), glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.proj = glm::perspective(glm::radians(45.0f), swapChain->getAspectRatio(), 0.1f, 10.0f);
-
-        const auto uniformBuffer = UniformBuffer::Builder()
-            .dataByteSize(sizeof(UniformBufferObject))
-            .build(*engine);
-        uniformBuffer->setBufferData(&ubo);
-
-        auto shader = GraphicShader::Builder()
-            .descriptorCount(2)
-            .descriptor(0, DescriptorType::UniformBuffer, 1, Shader::Stage::Vertex)
-            .descriptor(1, DescriptorType::CombinedImageSampler, 1, Shader::Stage::Fragment)
-            .pushConstantRange(Shader::Stage::Vertex, 0, 64)
-            .pushConstantRange(Shader::Stage::Fragment, 16, 32)
+        const auto shader = GraphicShader::Builder()
             .vertexShader("shaders/shader.vert")
             .fragmentShader("shaders/shader.frag")
             .build(*engine, *swapChain);
 
         const auto shaderInstance = shader->createInstance(*engine);
-        shaderInstance->setDescriptorData(0, uniformBuffer, *engine);
 
         // The render loop
         context->loop([] {});
@@ -110,7 +85,6 @@ int main(int argc, char* argv[]) {
         // Destroy all rendering resources
         engine->destroyShaderInstance(shaderInstance);
         engine->destroyShader(shader);
-        engine->destroyBuffer(uniformBuffer);
         engine->destroyBuffer(indexBuffer);
         engine->destroyBuffer(vertexBuffer);
         engine->destroySwapChain(swapChain);

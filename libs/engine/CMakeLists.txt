@@ -4,8 +4,10 @@ set(TARGET engine)
 
 set(SRCS
         src/Buffer.cpp
+        src/Composable.cpp
         src/ComputeShader.cpp
         src/Context.cpp
+        src/Drawable.cpp
         src/Engine.cpp
         src/GraphicShader.cpp
         src/IndexBuffer.cpp
@@ -14,6 +16,7 @@ set(SRCS
         src/Shader.cpp
         src/ShaderInstance.cpp
         src/SwapChain.cpp
+        src/Transformable.cpp
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp
         src/allocator/ResourceAllocator.cpp

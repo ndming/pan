@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <memory>
 #include <vector>
 
 
@@ -47,19 +46,19 @@ public:
             return *static_cast<T*>(this);
         }
 
-        T& pushConstantRange(const Stage stage, const uint32_t byteOffset, const uint32_t byteSize) {
-            _pushConstantRanges.emplace_back(getNativeShaderStage(stage), byteOffset, byteSize);
-            return *static_cast<T*>(this);
-        }
-
         virtual ~Builder() = default;
 
     protected:
-        std::unique_ptr<Shader> buildShader(
+        T& pushConstantRange(const vk::ShaderStageFlags stageFlags, const uint32_t byteOffset, const uint32_t byteSize) {
+            _pushConstantRanges.emplace_back(stageFlags, byteOffset, byteSize);
+            return *static_cast<T*>(this);
+        }
+
+        Shader* buildShader(
             const vk::DescriptorSetLayout& descriptorSetLayout,
             const vk::PipelineLayout& pipelineLayout,
             const vk::Pipeline& pipeline) {
-            return std::unique_ptr<Shader>(new Shader{ descriptorSetLayout, pipelineLayout, pipeline, std::move(_descriptorBindings) });
+            return new Shader{ descriptorSetLayout, pipelineLayout, pipeline, std::move(_descriptorBindings) };
         }
 
         [[nodiscard]] static std::vector<char> readShaderFile(const std::filesystem::path& path) {
@@ -108,6 +107,7 @@ public:
     [[nodiscard]] vk::DescriptorSetLayout getNativeDescriptorSetLayout() const;
     [[nodiscard]] vk::PipelineLayout getNativePipelineLayout() const;
     [[nodiscard]] vk::Pipeline getNativePipeline() const;
+
     [[nodiscard]] static vk::ShaderStageFlags getNativeShaderStage(Stage stage);
 
 private:

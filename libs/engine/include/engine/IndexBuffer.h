@@ -31,6 +31,9 @@ public:
 
     void setData(const void* data, const Engine& engine) const;
 
+    [[nodiscard]] uint32_t getIndexCount() const;
+    [[nodiscard]] vk::IndexType getNativeIndexType() const;
+
     IndexBuffer(const IndexBuffer&) = delete;
     IndexBuffer& operator=(const IndexBuffer&) = delete;
 

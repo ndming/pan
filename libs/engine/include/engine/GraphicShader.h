@@ -2,8 +2,6 @@
 
 #include "engine/Shader.h"
 
-#include <memory>
-
 
 class Engine;
 class SwapChain;
@@ -17,7 +15,7 @@ public:
 
         Builder& minSampleShading(float sample);
 
-        [[nodiscard]] std::unique_ptr<Shader> build(const Engine& engine, const SwapChain& swapChain);
+        [[nodiscard]] Shader* build(const Engine& engine, const SwapChain& swapChain);
 
     private:
         [[nodiscard]] bool checkPushConstantSizeLimit(uint32_t psLimit) const;
@@ -30,7 +28,6 @@ public:
         std::string _fragShaderEntryPoint{};
 
         float _minSampleShading{ .0f };
-
     };
 
     GraphicShader() = delete;
