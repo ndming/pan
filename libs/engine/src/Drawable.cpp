@@ -57,9 +57,9 @@ noexcept : _primitives{ std::move(primitives) }, _shaderInstances{ shaderInstanc
 std::vector<vk::CommandBuffer> Drawable::recordDrawingCommands(
     const uint32_t frameIndex,
     const vk::CommandBuffer& commandBuffer,
-    const std::function<void(const vk::CommandBuffer&)>& onPipelineBound,
     const glm::mat4& cameraMatrix,
-    const glm::mat4& currentTransform
+    const glm::mat4& currentTransform,
+    const std::function<void(const vk::CommandBuffer&)>& onPipelineBound
 ) const {
     // Propagate down the transform
     const auto mvp = ModelViewProjection{ cameraMatrix, currentTransform * _localTransform };
@@ -111,7 +111,7 @@ std::vector<vk::CommandBuffer> Drawable::recordDrawingCommands(
     auto buffers = std::vector<vk::CommandBuffer>{};
     for (const auto& composable : _children) {
         auto childBuffers = composable->recordDrawingCommands(
-            frameIndex, commandBuffer, onPipelineBound, cameraMatrix, mvp.transform);
+            frameIndex, commandBuffer, cameraMatrix, mvp.transform, onPipelineBound);
         buffers.insert(buffers.end(), std::make_move_iterator(childBuffers.begin()), std::make_move_iterator(childBuffers.end()));
     }
     return buffers;

@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
         // Create an engine
         const auto engine = Engine::create(context->getSurface());
 
-        // Create a swap chain and a view
+        // Create a swap chain and a renderer
         const auto swapChain = engine->createSwapChain();
-        const auto view = View::create(*swapChain);
+        const auto renderer = engine->createRenderer();
 
         const auto vertexBuffer = VertexBuffer::Builder(2)
             .vertexCount(vertices.size())
@@ -77,6 +77,8 @@ int main(int argc, char* argv[]) {
 
         const auto shaderInstance = shader->createInstance(*engine);
 
+        // Create a view and a scene
+        const auto view = View::create(*swapChain);
         const auto scene = Scene::create();
 
         // The render loop
@@ -92,6 +94,7 @@ int main(int argc, char* argv[]) {
         engine->destroyBuffer(indexBuffer);
         engine->destroyBuffer(vertexBuffer);
         engine->destroySwapChain(swapChain);
+        engine->destroyRenderer(renderer);
         engine->destroy();
 
         // Destroy the window context

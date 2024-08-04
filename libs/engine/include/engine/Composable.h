@@ -24,9 +24,9 @@ public:
     [[nodiscard]] virtual std::vector<vk::CommandBuffer> recordDrawingCommands(
         uint32_t frameIndex,
         const vk::CommandBuffer& commandBuffer,
-        const std::function<void(const vk::CommandBuffer&)>& onPipelineBound,
         const glm::mat4& cameraMatrix,
-        const glm::mat4& currentTransform) const = 0;
+        const glm::mat4& currentTransform,
+        const std::function<void(const vk::CommandBuffer&)>& onPipelineBound) const = 0;
 
     virtual void recordDrawingCommands(
         uint32_t frameIndex,

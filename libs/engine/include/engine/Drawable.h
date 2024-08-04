@@ -53,9 +53,9 @@ public:
     [[nodiscard]] std::vector<vk::CommandBuffer> recordDrawingCommands(
         uint32_t frameIndex,
         const vk::CommandBuffer& commandBuffer,
-        const std::function<void(const vk::CommandBuffer&)>& onPipelineBound,
         const glm::mat4& cameraMatrix,
-        const glm::mat4& currentTransform) const override;
+        const glm::mat4& currentTransform,
+        const std::function<void(const vk::CommandBuffer&)>& onPipelineBound) const override;
 
     void recordDrawingCommands(
         uint32_t frameIndex,

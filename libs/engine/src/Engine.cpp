@@ -204,11 +204,19 @@ void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
 
 
 Renderer* Engine::createRenderer() const {
-    return nullptr;
+    // We will be recording a command buffer every frame, so we want to be able to reset and re-record over it
+    const auto graphicsCommandPool = _device.createCommandPool(
+        { vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _swapChain->_graphicsFamily.value() });
+    return new Renderer{ graphicsCommandPool, _device };
 }
 
 void Engine::destroyRenderer(Renderer* const renderer) const noexcept {
-
+    using namespace std::ranges;
+    for_each(renderer->_drawingFences, [this](const auto& it) { _device.destroyFence(it); });
+    for_each(renderer->_renderFinishedSemaphores, [this](const auto& it) { _device.destroySemaphore(it); });
+    for_each(renderer->_imageAvailableSemaphores, [this](const auto& it) { _device.destroySemaphore(it); });
+    _device.destroyCommandPool(renderer->_graphicsCommandPool);
+    delete renderer;
 }
 
 

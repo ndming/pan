@@ -67,7 +67,7 @@ private:
     vk::DebugUtilsMessengerEXT _debugMessenger;
 #endif
 
-    // The SwapChain will be automatically created when the Engine is created. This is because the SwapChain manages the
+    // The SwapChain will be automatically created when the Engine is created. This is because the SwapChain manages
     // the underlying surface which plays a crucial role in selecting the physical device. A call to createSwapChain
     // will instead populate the SwapChain's resources (eg. render targets). The SwapChain will own the physial device
     // and queue families since it uses them more frequently.
