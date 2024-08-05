@@ -89,9 +89,12 @@ int main(int argc, char* argv[]) {
 
         // Create a view
         const auto view = View::create(*swapChain);
-        view->setPolygonMode(View::PolygonMode::Line);
-        view->setLineWidth(2.0f);
         view->setScene(scene);
+
+        swapChain->setOnFramebufferResize([&view] (const auto width, const auto height) {
+            view->setViewport(0, 0, width, height);
+            view->setScissor(0, 0, width, height);
+        });
 
         // The render loop
         context->loop([&] {

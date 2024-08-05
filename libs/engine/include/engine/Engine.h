@@ -23,7 +23,9 @@ public:
     static std::unique_ptr<Engine> create(Surface* surface, const EngineFeature& feature = {});
     void destroy() noexcept;
 
-    [[nodiscard]] SwapChain* createSwapChain() const;
+    // The default (and preferred) MSAA level is 4x MSAA which is particularly efficient in tiler architectures where
+    // the multi-sampled attachment is resolved in tile memory and can therefore be transient.
+    [[nodiscard]] SwapChain* createSwapChain(SwapChain::MSAA level = SwapChain::MSAA::x4) const;
     void destroySwapChain(SwapChain* swapChain) const noexcept;
 
     [[nodiscard]] Renderer* createRenderer() const;

@@ -84,12 +84,6 @@ SwapChain::SwapChain(
     // Print the device name
     const auto properties = _physicalDevice.getProperties();
     PLOGI << "Found a suitable device: " << properties.deviceName.data();
-
-    // Check if the device supports MSAA
-    if (getNativeMaxUsableSampleCount() == vk::SampleCountFlagBits::e1) {
-        PLOGE << "Using a device with no MSAA support when enabling MSAA";
-        throw std::runtime_error("The device must support at least 4x MSAA");
-    }
 }
 
 void SwapChain::framebufferResizeCallback(GLFWwindow* window, [[maybe_unused]] const int width, [[maybe_unused]] const int height) {
@@ -97,9 +91,10 @@ void SwapChain::framebufferResizeCallback(GLFWwindow* window, [[maybe_unused]] c
     swapChain->_framebufferResized = true;
 }
 
-void SwapChain::init(const vk::Device& device, ResourceAllocator* const allocator) {
+void SwapChain::init(const vk::Device& device, ResourceAllocator* const allocator, const MSAA level) {
     _allocator = allocator;
     _presentQueue = device.getQueue(_presentFamily.value(), 0);
+    _msaaSamples = getOrFallbackSampleCount(level, getNativeMaxUsableSampleCount());
 
     createSwapChain(device);
     createImageViews(device);
@@ -293,46 +288,6 @@ vk::SurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(const std::vector<vk::Su
     return availableFormats[0];
 }
 
-vk::PresentModeKHR SwapChain::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes) {
-    // MAILBOX is a very nice trade-off if energy usage is not a concern. It allows us to avoid tearing while still
-    // maintaining a fairly low latency by rendering new images that are as up-to-date as possible right until
-    // the vertical blank. On mobile devices, where energy usage is more important, FIFO is more preferable
-    constexpr auto preferredMode = vk::PresentModeKHR::eMailbox;
-    if (const auto found = std::ranges::find(availablePresentModes, preferredMode); found != availablePresentModes.end()) {
-        return preferredMode;
-    }
-    return vk::PresentModeKHR::eFifo;
-}
-
-vk::Extent2D SwapChain::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities, GLFWwindow* const window) {
-    // Vulkan tells us to match the resolution of the window set in the currentExtent member. However, some
-    // window managers do allow us to differ here and this is indicated by setting the width and height in
-    // currentExtent to a special value: the maximum value of uint32_t. In that case we’ll pick the resolution that
-    // best matches the window within the minImageExtent and maxImageExtent bounds
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        return capabilities.currentExtent;
-    }
-
-    // GLFW uses two units when measuring sizes: pixels and screen coordinates. For example, the resolution
-    // {WIDTH, HEIGHT} that we specified when creating the window is measured in screen coordinates.
-    // But Vulkan works with pixels, so the swap chain extent must be specified in pixels as well. Unfortunately,
-    // if we are using a high DPI display (like Apple’s Retina display), screen coordinates don’t correspond to pixels.
-    // Instead, due to the higher pixel density, the resolution of the window in pixel will be larger than
-    // the resolution in screen coordinates. So if Vulkan doesn’t fix the swap extent for us, we can’t just use
-    // the original {WIDTH, HEIGHT}. Instead, we must use glfwGetFramebufferSize to query the resolution of the window
-    // in pixel before matching it against the minimum and maximum image extent.
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-
-    auto actualExtent = vk::Extent2D{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
-    actualExtent.width = std::clamp(
-        actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-    actualExtent.height = std::clamp(
-        actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-
-    return actualExtent;
-}
-
 bool SwapChain::acquire(const vk::Device& device, const uint64_t timeout, const vk::Semaphore& semaphore, uint32_t* imageIndex) {
     const auto result = device.acquireNextImageKHR(_swapChain, timeout, semaphore, nullptr);
     if (result.result == vk::Result::eErrorOutOfDateKHR) {
@@ -383,6 +338,8 @@ void SwapChain::recreate(const vk::Device& device) {
     createColorResources(device);
     createFramebuffers(device);
 
+    _customFramebufferResizeCallback(_imageExtent.width, _imageExtent.height);
+
     /* TODO: Make use of the oldSwapChain field
      * The disadvantage of this approach is that we need to stop all rendering before creating the new swap chain.
      * It is possible to create a new swap chain while drawing commands on an image from the old swap chain are still
@@ -402,6 +359,85 @@ void SwapChain::cleanup(const vk::Device& device) const noexcept {
 
     // Get rid of the old swap chain
     device.destroySwapchainKHR(_swapChain);
+}
+
+vk::PresentModeKHR SwapChain::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes) {
+    // MAILBOX is a very nice trade-off if energy usage is not a concern. It allows us to avoid tearing while still
+    // maintaining a fairly low latency by rendering new images that are as up-to-date as possible right until
+    // the vertical blank. On mobile devices, where energy usage is more important, FIFO is more preferable
+    constexpr auto preferredMode = vk::PresentModeKHR::eMailbox;
+    if (const auto found = std::ranges::find(availablePresentModes, preferredMode); found != availablePresentModes.end()) {
+        return preferredMode;
+    }
+    return vk::PresentModeKHR::eFifo;
+}
+
+vk::Extent2D SwapChain::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities, GLFWwindow* const window) {
+    // Vulkan tells us to match the resolution of the window set in the currentExtent member. However, some
+    // window managers do allow us to differ here and this is indicated by setting the width and height in
+    // currentExtent to a special value: the maximum value of uint32_t. In that case we’ll pick the resolution that
+    // best matches the window within the minImageExtent and maxImageExtent bounds
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        return capabilities.currentExtent;
+    }
+
+    // GLFW uses two units when measuring sizes: pixels and screen coordinates. For example, the resolution
+    // {WIDTH, HEIGHT} that we specified when creating the window is measured in screen coordinates.
+    // But Vulkan works with pixels, so the swap chain extent must be specified in pixels as well. Unfortunately,
+    // if we are using a high DPI display (like Apple’s Retina display), screen coordinates don’t correspond to pixels.
+    // Instead, due to the higher pixel density, the resolution of the window in pixel will be larger than
+    // the resolution in screen coordinates. So if Vulkan doesn’t fix the swap extent for us, we can’t just use
+    // the original {WIDTH, HEIGHT}. Instead, we must use glfwGetFramebufferSize to query the resolution of the window
+    // in pixel before matching it against the minimum and maximum image extent.
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+
+    auto actualExtent = vk::Extent2D{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+    actualExtent.width = std::clamp(
+        actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+    actualExtent.height = std::clamp(
+        actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+    return actualExtent;
+}
+
+vk::SampleCountFlagBits SwapChain::getSampleCount(const MSAA msaaLevel) {
+    switch (msaaLevel) {
+        case MSAA::x2:  return vk::SampleCountFlagBits::e2;
+        case MSAA::x4:  return vk::SampleCountFlagBits::e4;
+        case MSAA::x8:  return vk::SampleCountFlagBits::e8;
+        case MSAA::x16: return vk::SampleCountFlagBits::e16;
+        case MSAA::x32: return vk::SampleCountFlagBits::e32;
+        case MSAA::x64: return vk::SampleCountFlagBits::e64;
+        default: throw std::runtime_error("Unrecognized MSAA level");
+    }
+}
+
+vk::SampleCountFlagBits SwapChain::getOrFallbackSampleCount(const MSAA level, const vk::SampleCountFlagBits maxSampleCount) {
+    if (const auto samples = getSampleCount(level); samples <= maxSampleCount) {
+        return samples;
+    }
+    // Fallback to the max usable sample count
+    using enum vk::SampleCountFlagBits;
+    switch (maxSampleCount) {
+    case e2:  PLOGW << "Falling back MSAA configuration: your device only supports up to 2x MSAA";  return e2;
+    case e4:  PLOGW << "Falling back MSAA configuration: your device only supports up to 4x MSAA";  return e4;
+    case e8:  PLOGW << "Falling back MSAA configuration: your device only supports up to 8x MSAA";  return e8;
+    case e16: PLOGW << "Falling back MSAA configuration: your device only supports up to 16x MSAA"; return e16;
+    case e32: PLOGW << "Falling back MSAA configuration: your device only supports up to 32x MSAA"; return e32;
+    case e64: PLOGW << "Falling back MSAA configuration: your device only supports up to 64x MSAA"; return e64;
+    default:
+        PLOGE << "Received unvalid sample count: your device might not support MSAA";
+        throw std::runtime_error("The device must support at least 2x MSAA");
+    }
+}
+
+void SwapChain::setOnFramebufferResize(const std::function<void(uint32_t, uint32_t)>& callback) {
+    _customFramebufferResizeCallback = callback;
+}
+
+void SwapChain::setOnFramebufferResize(std::function<void(uint32_t, uint32_t)>&& callback) noexcept {
+    _customFramebufferResizeCallback = std::move(callback);
 }
 
 float SwapChain::getAspectRatio() const {

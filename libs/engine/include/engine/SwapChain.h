@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <vector>
 
@@ -12,17 +13,35 @@ struct GLFWwindow;
 class ResourceAllocator;
 
 class SwapChain final {
+    // The Engine needs access to the constructor and initSwapChain method when creating and populating the SwapChain
+    // These are the cases where an 'internal' access specifier like that from the Kotlin language comes in handy
+    friend class Engine;
+
+    // Likewise, the Renderer needs access to the acquire and present methods of SwapChain
+    friend class Renderer;
+
 public:
-    SwapChain(const SwapChain&) = delete;
-    SwapChain& operator=(const SwapChain&) = delete;
+    enum class MSAA {
+        x2,
+        x4,
+        x8,
+        x16,
+        x32,
+        x64,
+    };
+
+    void setOnFramebufferResize(const std::function<void(uint32_t, uint32_t)>& callback);
+    void setOnFramebufferResize(std::function<void(uint32_t, uint32_t)>&& callback) noexcept;
 
     [[nodiscard]] float getAspectRatio() const;
 
     [[nodiscard]] vk::Extent2D getNativeSwapImageExtent() const;
     [[nodiscard]] vk::RenderPass getNativeRenderPass() const;
     [[nodiscard]] vk::SampleCountFlagBits getNativeSampleCount() const;
-    [[nodiscard]] vk::SampleCountFlagBits getNativeMaxUsableSampleCount() const;
     [[nodiscard]] const vk::Framebuffer& getNativeFramebufferAt(uint32_t imageIndex) const;
+
+    SwapChain(const SwapChain&) = delete;
+    SwapChain& operator=(const SwapChain&) = delete;
 
 private:
     SwapChain(
@@ -32,7 +51,7 @@ private:
         const std::vector<const char*>& extensions);
 
     // "Internal" operations
-    void init(const vk::Device& device, ResourceAllocator* allocator);
+    void init(const vk::Device& device, ResourceAllocator* allocator, MSAA level);
     bool acquire(const vk::Device& device, uint64_t timeout, const vk::Semaphore& semaphore, uint32_t* imageIndex);
     void present(const vk::Device& device, uint32_t imageIndex, const vk::Semaphore& semaphore);
 
@@ -43,20 +62,24 @@ private:
     void createRenderPass(const vk::Device& device);
     void createFramebuffers(const vk::Device& device);
 
+    void recreate(const vk::Device& device);
+    void cleanup(const vk::Device& device) const noexcept;
+
+    // Utility static methods
     using SurfaceFormat = vk::SurfaceFormatKHR;
     using PresentMode = vk::PresentModeKHR;
     using SurfaceCapabilities = vk::SurfaceCapabilitiesKHR;
     [[nodiscard]] static SurfaceFormat chooseSwapSurfaceFormat(const std::vector<SurfaceFormat>& availableFormats);
     [[nodiscard]] static PresentMode chooseSwapPresentMode(const std::vector<PresentMode>& availablePresentModes);
     [[nodiscard]] static vk::Extent2D chooseSwapExtent(const SurfaceCapabilities& capabilities, GLFWwindow* window);
-
-    void recreate(const vk::Device& device);
-    void cleanup(const vk::Device& device) const noexcept;
+    [[nodiscard]] static vk::SampleCountFlagBits getSampleCount(MSAA msaaLevel);
+    [[nodiscard]] static vk::SampleCountFlagBits getOrFallbackSampleCount(MSAA level, vk::SampleCountFlagBits maxSampleCount);
 
     GLFWwindow* _window;
     vk::SurfaceKHR _surface;
 
     bool _framebufferResized{ false };
+    std::function<void(uint32_t, uint32_t)> _customFramebufferResizeCallback{ [](uint32_t, uint32_t) {} };
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
     vk::PhysicalDevice _physicalDevice;
@@ -92,21 +115,13 @@ private:
     // information is wrapped in a render pass object.
     vk::RenderPass _renderPass{};
 
-    // The default (and only) MSAA level is 4x MSAA which is particularly efficient in tiler architectures where
-    // the multi-sampled attachment is resolved in tile memory and can therefore be transient. Given that most devices
-    // now support MSAA, we either go with 4x MSAA or we don't go at all (throw exception)
-    vk::SampleCountFlagBits _msaaSamples{ vk::SampleCountFlagBits::e4 };
+    // Given that most devices now support MSAA, we either go with MSAA or we don't go at all (throw exception)
+    vk::SampleCountFlagBits _msaaSamples{ vk::SampleCountFlagBits::e2 };
+    [[nodiscard]] vk::SampleCountFlagBits getNativeMaxUsableSampleCount() const;
 
     // The attachments specified during render pass creation are bound by wrapping them into a VkFramebuffer object.
     // The image that we have to use for the attachment depends on which image the swap chain returns when we retrieve
     // one for presentation. That means that we have to create a framebuffer for all of the images in the swap chain and
     // use the one that corresponds to the retrieved image at drawing time
     std::vector<vk::Framebuffer> _framebuffers{};
-
-    // The Engine needs access to the constructor and initSwapChain method when creating and populating the SwapChain
-    // These are the cases where an 'internal' access specifier like that from the Kotlin language comes in handy
-    friend class Engine;
-
-    // Likewise, the Renderer needs access to the acquire and present methods of SwapChain
-    friend class Renderer;
 };

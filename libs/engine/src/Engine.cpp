@@ -190,9 +190,9 @@ void Engine::destroy() noexcept {
 }
 
 
-SwapChain* Engine::createSwapChain() const {
+SwapChain* Engine::createSwapChain(const SwapChain::MSAA level) const {
     // Create a native Vulkan swap chain object and populate its resources
-    _swapChain->init(_device, _allocator);
+    _swapChain->init(_device, _allocator, level);
     return _swapChain;
 }
 
