@@ -89,6 +89,8 @@ int main(int argc, char* argv[]) {
 
         // Create a view
         const auto view = View::create(*swapChain);
+        view->setPolygonMode(View::PolygonMode::Line);
+        view->setLineWidth(2.0f);
         view->setScene(scene);
 
         // The render loop

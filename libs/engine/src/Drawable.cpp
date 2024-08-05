@@ -91,7 +91,6 @@ std::vector<vk::CommandBuffer> Drawable::recordDrawingCommands(
             static_cast<uint32_t>(attributeDescriptions.size()), attributeDescriptions.data()
         );
         commandBuffer.setPrimitiveTopology(topology);
-        commandBuffer.setPrimitiveRestartEnable(vk::False);
 
         // We only have a single VkBuffer and bindings are controlled through offsets
         const auto vertexBuffers = std::vector(vertexBuffer->getBindingDescriptions().size(), vertexBuffer->getNativeBuffer());

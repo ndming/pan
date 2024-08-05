@@ -116,6 +116,7 @@ void Renderer::renderView(const std::unique_ptr<View>& view, const uint32_t imag
                 _vkCmdSetPolygonMode(buffer, static_cast<VkPolygonMode>(view->getNativePolygonMode()));
                 buffer.setCullMode(view->getNativeCullMode());
                 buffer.setFrontFace(view->getNativeFrontFace());
+                buffer.setPrimitiveRestartEnable(view->getNativePrimitiveRestartEnabled());
                 buffer.setLineWidth(view->getLineWidth());
             });
     });

@@ -127,8 +127,9 @@ Engine::Engine(GLFWwindow* const window, const EngineFeature& feature) {
 vk::PhysicalDeviceFeatures2 Engine::getPhysicalDeviceFeatures(const EngineFeature& feature) {
     // Basic features
     auto basicFeatures = vk::PhysicalDeviceFeatures{};
-    basicFeatures.largePoints = vk::True;  // explicitly required by the Engine
-    basicFeatures.wideLines = vk::True;    // explicitly required by the Engine
+    basicFeatures.largePoints = vk::True;       // for gl_PointSize in vertex shader
+    basicFeatures.wideLines = vk::True;         // for custom line width
+    basicFeatures.fillModeNonSolid = vk::True;  // for custom polygon mode
     if (feature.sampleShading) {
         basicFeatures.sampleRateShading = vk::True;
     }

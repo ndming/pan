@@ -75,6 +75,14 @@ vk::FrontFace View::getNativeFrontFace() const {
     return _frontFace;
 }
 
+void View::setPrimitiveRestart(const bool enabled) {
+    _primitveRestartEnabled = enabled;
+}
+
+vk::Bool32 View::getNativePrimitiveRestartEnabled() const {
+    return _primitveRestartEnabled;
+}
+
 void View::setLineWidth(const float width) {
     _lineWidth = std::max(1.0f, width);
 }

@@ -51,6 +51,9 @@ public:
     void setFrontFace(FrontFace direction);
     [[nodiscard]] vk::FrontFace getNativeFrontFace() const;
 
+    void setPrimitiveRestart(bool enabled);
+    [[nodiscard]] vk::Bool32 getNativePrimitiveRestartEnabled() const;
+
     void setLineWidth(float width);
     [[nodiscard]] float getLineWidth() const;
 
@@ -66,5 +69,6 @@ private:
     vk::CullModeFlagBits _cullMode{ vk::CullModeFlagBits::eBack };
     vk::FrontFace _frontFace{ vk::FrontFace::eCounterClockwise };
 
+    vk::Bool32 _primitveRestartEnabled{ vk::False };
     float _lineWidth{ 1.0f };
 };
