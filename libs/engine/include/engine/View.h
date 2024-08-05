@@ -8,6 +8,7 @@
 
 class Engine;
 struct EngineFeature;
+class Scene;
 class SwapChain;
 
 
@@ -32,6 +33,9 @@ public:
 
     [[nodiscard]] static std::unique_ptr<View> create(const SwapChain& swapChain);
 
+    void setScene(const std::shared_ptr<Scene>& scene);
+    [[nodiscard]] std::shared_ptr<Scene> getScene() const;
+
     void setViewport(float x, float y, float width, float height);
     [[nodiscard]] vk::Viewport getNativeViewport() const;
 
@@ -50,10 +54,10 @@ public:
     void setLineWidth(float width);
     [[nodiscard]] float getLineWidth() const;
 
-    void recordAllViewStates(const vk::CommandBuffer& buffer) const;
-
 private:
     explicit View(const vk::Extent2D& swapImageExtent);
+
+    std::shared_ptr<Scene> _scene{};
 
     vk::Viewport _viewport;
     vk::Rect2D _scissor;

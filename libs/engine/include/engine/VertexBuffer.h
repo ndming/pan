@@ -127,10 +127,10 @@ public:
     private:
         static vk::Format getFormat(AttributeFormat format);
 
-        std::vector<vk::VertexInputAttributeDescription2EXT> _attributes{};
+        std::vector<VkVertexInputAttributeDescription2EXT> _attributes{};
         int _vertexCount{ 0 };
 
-        std::vector<vk::VertexInputBindingDescription2EXT> _bindings{};
+        std::vector<VkVertexInputBindingDescription2EXT> _bindings{};
         int _bindingCount{ 0 };
     };
 
@@ -144,8 +144,8 @@ public:
      */
     void setBindingData(uint32_t binding, const void* data, const Engine& engine) const;
 
-    [[nodiscard]] const std::vector<vk::VertexInputBindingDescription2EXT>& getBindingDescriptions() const;
-    [[nodiscard]] const std::vector<vk::VertexInputAttributeDescription2EXT>& getAttributeDescriptions() const;
+    [[nodiscard]] const std::vector<VkVertexInputBindingDescription2EXT>& getBindingDescriptions() const;
+    [[nodiscard]] const std::vector<VkVertexInputAttributeDescription2EXT>& getAttributeDescriptions() const;
     [[nodiscard]] const std::vector<vk::DeviceSize>& getOffsets() const;
 
     VertexBuffer(const VertexBuffer&) = delete;
@@ -153,15 +153,15 @@ public:
 
 private:
     VertexBuffer(
-       std::vector<vk::VertexInputBindingDescription2EXT>&& bindings,
-       std::vector<vk::VertexInputAttributeDescription2EXT>&& attributes,
+       std::vector<VkVertexInputBindingDescription2EXT>&& bindings,
+       std::vector<VkVertexInputAttributeDescription2EXT>&& attributes,
        std::vector<vk::DeviceSize>&& offsets,
        int vertexCount,
        const vk::Buffer& buffer,
        void* allocation);
 
-    std::vector<vk::VertexInputBindingDescription2EXT> _bindingDescriptions;
-    std::vector<vk::VertexInputAttributeDescription2EXT> _attributeDescriptions;
+    std::vector<VkVertexInputBindingDescription2EXT> _bindingDescriptions;
+    std::vector<VkVertexInputAttributeDescription2EXT> _attributeDescriptions;
     std::vector<vk::DeviceSize> _offsets;
 
     int _vertexCount;

@@ -3,8 +3,8 @@
 #include <algorithm>
 
 
-std::unique_ptr<Scene> Scene::create() {
-    return std::unique_ptr<Scene>{ new Scene() };
+std::shared_ptr<Scene> Scene::create() {
+    return std::make_shared<Scene>();
 }
 
 void Scene::insert(const std::shared_ptr<Composable>& composable) {

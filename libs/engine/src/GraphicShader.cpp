@@ -123,9 +123,15 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
     constexpr auto depthStencil = vk::PipelineDepthStencilStateCreateInfo{  {}, vk::False, vk::False };
 
     // TODO: add suport for color blending
-    static constexpr auto colorBlendAttachment = vk::PipelineColorBlendAttachmentState{ vk::False };
+    auto colorBlendAttachment = vk::PipelineColorBlendAttachmentState{};
+    colorBlendAttachment.blendEnable = vk::False;
+    colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR |
+                                          vk::ColorComponentFlagBits::eG |
+                                          vk::ColorComponentFlagBits::eB |
+                                          vk::ColorComponentFlagBits::eA;
     // Configure global color blending
-    constexpr auto colorBlending = vk::PipelineColorBlendStateCreateInfo{ {}, vk::False, {}, 1, &colorBlendAttachment };
+    const auto colorBlending = vk::PipelineColorBlendStateCreateInfo{
+        {}, vk::False, {}, 1, &colorBlendAttachment };
 
     // Construct the pipeline
     const auto dynamicStateInfo = vk::PipelineDynamicStateCreateInfo{

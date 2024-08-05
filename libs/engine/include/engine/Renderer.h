@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include <array>
+#include <functional>
 #include <memory>
 
 
@@ -12,14 +13,23 @@ class View;
 
 class Renderer {
 public:
-    void render(const std::unique_ptr<View>& view, SwapChain* swapChain) const;
+    void render(
+        const std::unique_ptr<View>& view, SwapChain* swapChain,
+        const std::function<void(uint32_t)>& onFrameBegin = [](const uint32_t) {});
 
     static constexpr int getMaxFramesInFlight() { return MAX_FRAMES_IN_FLIGHT; }
 
 private:
-    Renderer(const vk::CommandPool& graphicsCommandPool, const vk::Device& device);
+    Renderer(
+        const vk::CommandPool& graphicsCommandPool,
+        const vk::Queue& graphicsQueue,
+        const vk::Device& device,
+        PFN_vkCmdSetPolygonModeEXT vkCmdSetPolygonMode);
+
+    void renderView(const std::unique_ptr<View>& view, uint32_t imageIndex, const SwapChain* swapChain) const;
 
     vk::CommandPool _graphicsCommandPool;
+    vk::Queue _graphicsQueue;
 
     // Instead of asking the Engine to provide the device for each rendering interation,
     // the Renderer better off get its own copy of it
@@ -34,6 +44,8 @@ private:
 
     // Which in-flight frame we are current at (frame index)
     uint32_t _currentFrame{ 0 };
+
+    PFN_vkCmdSetPolygonModeEXT _vkCmdSetPolygonMode;
 
     // Would be better if we have an "internal" access specifier
     friend class Engine;

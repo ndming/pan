@@ -33,7 +33,14 @@ VertexBuffer::Builder& VertexBuffer::Builder::binding(const uint32_t binding, co
         throw std::invalid_argument("Received invalid binding index");
     }
     // We're not supporting instanced rendering at this moment
-    _bindings[binding] = { binding, byteStride, vk::VertexInputRate::eVertex };
+    auto bindingDescription = VkVertexInputBindingDescription2EXT{};
+    bindingDescription.sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_BINDING_DESCRIPTION_2_EXT;
+    bindingDescription.binding = binding;
+    bindingDescription.stride = byteStride;
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    bindingDescription.divisor = 1;
+
+    _bindings[binding] = bindingDescription;
     return *this;
 }
 
@@ -43,7 +50,14 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(
     const AttributeFormat format,
     const uint32_t byteOffset
 ) {
-    _attributes.emplace_back(location, binding, getFormat(format), byteOffset);
+    auto attributeDescription = VkVertexInputAttributeDescription2EXT{};
+    attributeDescription.sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT;
+    attributeDescription.binding = binding;
+    attributeDescription.location = location;
+    attributeDescription.format = static_cast<VkFormat>(getFormat(format));
+    attributeDescription.offset = byteOffset;
+
+    _attributes.push_back(attributeDescription);
     return *this;
 }
 
@@ -91,8 +105,8 @@ VertexBuffer* VertexBuffer::Builder::build(const Engine& engine) {
 }
 
 VertexBuffer::VertexBuffer(
-    std::vector<vk::VertexInputBindingDescription2EXT>&& bindings,
-    std::vector<vk::VertexInputAttributeDescription2EXT>&& attributes,
+    std::vector<VkVertexInputBindingDescription2EXT>&& bindings,
+    std::vector<VkVertexInputAttributeDescription2EXT>&& attributes,
     std::vector<vk::DeviceSize>&& offsets,
     const int vertexCount,
     const vk::Buffer& buffer,
@@ -108,11 +122,11 @@ void VertexBuffer::setBindingData(const uint32_t binding, const void* const data
     transferBufferData(_vertexCount * _bindingDescriptions[binding].stride, data, _offsets[binding], engine);
 }
 
-const std::vector<vk::VertexInputBindingDescription2EXT>& VertexBuffer::getBindingDescriptions() const {
+const std::vector<VkVertexInputBindingDescription2EXT>& VertexBuffer::getBindingDescriptions() const {
     return _bindingDescriptions;
 }
 
-const std::vector<vk::VertexInputAttributeDescription2EXT>& VertexBuffer::getAttributeDescriptions() const {
+const std::vector<VkVertexInputAttributeDescription2EXT>& VertexBuffer::getAttributeDescriptions() const {
     return _attributeDescriptions;
 }
 

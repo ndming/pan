@@ -1,4 +1,5 @@
 #include "engine/Drawable.h"
+#include "engine/Engine.h"
 #include "engine/ShaderInstance.h"
 #include "engine/IndexBuffer.h"
 #include "engine/VertexBuffer.h"
@@ -35,7 +36,8 @@ std::shared_ptr<Drawable> Drawable::Builder::build([[maybe_unused]] const Engine
         PLOGE << "Constructing a Drawable with missing shader instance(s)";
         throw std::runtime_error("Missing shader instance");
     }
-    return std::make_shared<Drawable>(std::move(_primitives), std::move(_shaderInstances));
+    const auto func = reinterpret_cast<PFN_vkCmdSetVertexInputEXT>(vkGetInstanceProcAddr(engine.getNativeInstance(), "vkCmdSetVertexInputEXT"));
+    return std::make_shared<Drawable>(std::move(_primitives), std::move(_shaderInstances), func);
 }
 
 vk::PrimitiveTopology Drawable::Builder::getPrimitiveTopology(const Topology topology) {
@@ -50,8 +52,13 @@ vk::PrimitiveTopology Drawable::Builder::getPrimitiveTopology(const Topology top
     }
 }
 
-Drawable::Drawable(std::vector<Primitive>&& primitives, std::vector<const ShaderInstance*>&& shaderInstances)
-noexcept : _primitives{ std::move(primitives) }, _shaderInstances{ shaderInstances } {
+Drawable::Drawable(
+    std::vector<Primitive>&& primitives,
+    std::vector<const ShaderInstance*>&& shaderInstances,
+    PFN_vkCmdSetVertexInputEXT vkCmdSetVertexInput
+) : _primitives{ std::move(primitives) },
+    _shaderInstances{ shaderInstances },
+    _vkCmdSetVertexInput{ vkCmdSetVertexInput } {
 }
 
 std::vector<vk::CommandBuffer> Drawable::recordDrawingCommands(
@@ -70,15 +77,21 @@ std::vector<vk::CommandBuffer> Drawable::recordDrawingCommands(
         const auto instance = _shaderInstances[i];
         commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, instance->getShader()->getNativePipeline());
 
-        // Tell the renderer it's time to set the dynamic state
+        // Tell the renderer it's time to set dynamic states
         onPipelineBound(commandBuffer);
 
         // Our turn to record drawing commands
         const auto& [topology, vertexBuffer, indexBuffer, indexCount, firstIndex, vertexOffset] = _primitives[i];
 
         // Specify the remaining pipeline dynamic states
-        commandBuffer.setVertexInputEXT(vertexBuffer->getBindingDescriptions(), vertexBuffer->getAttributeDescriptions());
+        const auto bindingDescriptions = vertexBuffer->getBindingDescriptions();
+        const auto attributeDescriptions = vertexBuffer->getAttributeDescriptions();
+        _vkCmdSetVertexInput(commandBuffer,
+            static_cast<uint32_t>(bindingDescriptions.size()), bindingDescriptions.data(),
+            static_cast<uint32_t>(attributeDescriptions.size()), attributeDescriptions.data()
+        );
         commandBuffer.setPrimitiveTopology(topology);
+        commandBuffer.setPrimitiveRestartEnable(vk::False);
 
         // We only have a single VkBuffer and bindings are controlled through offsets
         const auto vertexBuffers = std::vector(vertexBuffer->getBindingDescriptions().size(), vertexBuffer->getNativeBuffer());
@@ -132,7 +145,12 @@ void Drawable::recordDrawingCommands(
         const auto& [topology, vertexBuffer, indexBuffer, indexCount, firstIndex, vertexOffset] = _primitives[i];
 
         // Specify the remaining pipeline dynamic states
-        commandBuffer.setVertexInputEXT(vertexBuffer->getBindingDescriptions(), vertexBuffer->getAttributeDescriptions());
+        const auto bindingDescriptions = vertexBuffer->getBindingDescriptions();
+        const auto attributeDescriptions = vertexBuffer->getAttributeDescriptions();
+        _vkCmdSetVertexInput(commandBuffer,
+            static_cast<uint32_t>(bindingDescriptions.size()), bindingDescriptions.data(),
+            static_cast<uint32_t>(attributeDescriptions.size()), attributeDescriptions.data()
+        );
         commandBuffer.setPrimitiveTopology(topology);
 
         // Bind the vertex and index buffer

@@ -63,9 +63,14 @@ public:
         const glm::mat4& cameraMatrix,
         const glm::mat4 &currentTransform) const override;
 
-    Drawable(std::vector<Primitive>&& primitives, std::vector<const ShaderInstance*>&& shaderInstances) noexcept;
+    Drawable(
+        std::vector<Primitive>&& primitives,
+        std::vector<const ShaderInstance*>&& shaderInstances,
+        PFN_vkCmdSetVertexInputEXT vkCmdSetVertexInput);
 
 private:
     std::vector<Primitive> _primitives{};
     std::vector<const ShaderInstance*> _shaderInstances{};
+
+    PFN_vkCmdSetVertexInputEXT _vkCmdSetVertexInput;
 };

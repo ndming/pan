@@ -11,6 +11,14 @@ std::unique_ptr<View> View::create(const SwapChain& swapChain) {
     return std::unique_ptr<View>(new View{ swapChain.getNativeSwapImageExtent() });
 }
 
+void View::setScene(const std::shared_ptr<Scene>& scene) {
+    _scene = scene;
+}
+
+std::shared_ptr<Scene> View::getScene() const {
+    return _scene;
+}
+
 View::View(const vk::Extent2D& swapImageExtent) :
     _viewport{ 0.0f, 0.0f, static_cast<float>(swapImageExtent.width), static_cast<float>(swapImageExtent.height) },
     _scissor{ vk::Offset2D{ 0, 0 }, swapImageExtent } {

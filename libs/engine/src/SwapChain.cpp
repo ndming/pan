@@ -9,7 +9,6 @@
 #include <GLFW/glfw3.h>
 #include <plog/Log.h>
 
-#include <exception>
 #include <ranges>
 
 
@@ -31,6 +30,11 @@ SwapChain::SwapChain(
     const auto candidates = PhysicalDeviceSelector()
         .extensions(extensions)
         .select(instance.enumeratePhysicalDevices(), _surface, feature);
+
+    // Although many drivers and platforms trigger VK_ERROR_OUT_OF_DATE_KHR automatically after a window resize,
+    // it is not guaranteed to happen. That’s why we’ll add some extra code to also handle resizes explicitly
+    glfwSetWindowUserPointer(_window, this);
+    glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
 
     // Pick a physical device based on supported queue faimlies
     auto finder = QueueFamilyFinder()
@@ -88,8 +92,14 @@ SwapChain::SwapChain(
     }
 }
 
+void SwapChain::framebufferResizeCallback(GLFWwindow* window, [[maybe_unused]] const int width, [[maybe_unused]] const int height) {
+    const auto swapChain = static_cast<SwapChain*>(glfwGetWindowUserPointer(window));
+    swapChain->_framebufferResized = true;
+}
+
 void SwapChain::init(const vk::Device& device, ResourceAllocator* const allocator) {
     _allocator = allocator;
+    _presentQueue = device.getQueue(_presentFamily.value(), 0);
 
     createSwapChain(device);
     createImageViews(device);
@@ -209,6 +219,8 @@ void SwapChain::createRenderPass(const vk::Device& device) {
         vk::ImageLayout::ePresentSrcKHR   // we want the image to be ready for presentation after rendering
     };
 
+    // We should keep the order we specify these attachments in mind because later on we will have to specify
+    // clear values for them in the same order
     const auto attachments = std::array{ colorAttachment, colorAttachmentResolve };
 
     static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
@@ -222,6 +234,16 @@ void SwapChain::createRenderPass(const vk::Device& device) {
         &colorAttachmentResolveRef    // let the render pass define a multisample resolve operation
     };
 
+    // Subpasses in a render pass automatically take care of image layout transitions. These transitions are controlled
+    // by subpass dependencies, which specify memory and execution dependencies between subpasses. We have only a single
+    // subpass right now, but the operations right before and right after this subpass also count as implicit "subpasses"
+    // There are two built-in dependencies that take care of the transition at the start of the render pass and at the
+    // end of the render pass, but the former does not occur at the right time. It assumes that the transition occurs
+    // at the start of the pipeline, but we haven’t acquired the image yet at that point because the Renderer uses
+    // eColorAttachmentOutput for the drawing wait stage. There are two ways to deal with this problem:
+    // - In the Renderer, change the waitStages for the imageAvailableSemaphore to eTopOfPipe to ensure that the render
+    // passes don’t begin until the image is available
+    // - Make the render pass wait for the eColorAttachmentOutput stage, using subpass dependency
     constexpr auto dependency = vk::SubpassDependency{
         vk::SubpassExternal,  // src subpass
         0,                    // dst subpass
@@ -311,6 +333,38 @@ vk::Extent2D SwapChain::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capab
     return actualExtent;
 }
 
+bool SwapChain::acquire(const vk::Device& device, const uint64_t timeout, const vk::Semaphore& semaphore, uint32_t* imageIndex) {
+    const auto result = device.acquireNextImageKHR(_swapChain, timeout, semaphore, nullptr);
+    if (result.result == vk::Result::eErrorOutOfDateKHR) {
+        // Vulkan will usually just tell us that the swap chain is no longer adequate during presentation.
+        // ERROR_OUT_OF_DATE means the swap chain has become incompatible with the surface and can no longer be used
+        // for rendering, usually happens after a window resize. If that's the case, we recreate the swap chain and
+        // return false to signal the call site to terminate the current rendering attempt
+        recreate(device);
+        return false;
+    }
+    if (result.result != vk::Result::eSuccess && result.result != vk::Result::eSuboptimalKHR) {
+        // VK_SUBOPTIMAL_KHR means the swap chain can still be used to successfully present to the surface,
+        // but the surface properties are no longer matched exactly. If this is not the case and the acquisition
+        // result come out failed, then there's must be something wrong.
+        throw std::runtime_error("Failed to acquire swap chain image!");
+    }
+    // Sucessfully acquire an image
+    *imageIndex = result.value;
+    return true;
+}
+
+void SwapChain::present(const vk::Device& device, uint32_t imageIndex, const vk::Semaphore& semaphore) {
+    const auto presentInfo = vk::PresentInfoKHR{ semaphore, _swapChain, imageIndex };
+    if (const auto result = _presentQueue.presentKHR(&presentInfo);
+        result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _framebufferResized) {
+        _framebufferResized = false;
+        recreate(device);
+    } else if (result != vk::Result::eSuccess) {
+        throw std::runtime_error("Failed to present a swap chain image!");
+    }
+}
+
 void SwapChain::recreate(const vk::Device& device) {
     // We won't recreate while the window is being minimized
     int width = 0, height = 0;
@@ -327,7 +381,6 @@ void SwapChain::recreate(const vk::Device& device) {
     createSwapChain(device);
     createImageViews(device);
     createColorResources(device);
-    createRenderPass(device);
     createFramebuffers(device);
 
     /* TODO: Make use of the oldSwapChain field
@@ -378,4 +431,8 @@ vk::SampleCountFlagBits SwapChain::getNativeMaxUsableSampleCount() const {
     if (counts & vk::SampleCountFlagBits::e4)  { return vk::SampleCountFlagBits::e4; }
     if (counts & vk::SampleCountFlagBits::e2)  { return vk::SampleCountFlagBits::e2; }
     return vk::SampleCountFlagBits::e1;
+}
+
+const vk::Framebuffer& SwapChain::getNativeFramebufferAt(const uint32_t imageIndex) const {
+    return _framebuffers[imageIndex];
 }

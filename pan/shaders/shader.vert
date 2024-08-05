@@ -11,6 +11,6 @@ layout(push_constant, std430) uniform ModelViewProjection {
 layout(location = 0) out vec4 fragColor;
 
 void main() {
-    gl_Position = mvp.cameraMat * mvp.transform * vec4(inPosition, 1.0);
+    gl_Position = vec4(inPosition, 1.0);
     fragColor = inColor;
 }

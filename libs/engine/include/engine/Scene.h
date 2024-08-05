@@ -9,7 +9,7 @@ class Composable;
 
 class Scene final {
 public:
-    [[nodiscard]] static std::unique_ptr<Scene> create();
+    [[nodiscard]] static std::shared_ptr<Scene> create();
 
     void insert(const std::shared_ptr<Composable>& composable);
     void remove(const std::shared_ptr<Composable>& composable);
@@ -17,7 +17,5 @@ public:
     void forEach(const std::function<void(const std::shared_ptr<Composable>&)>& f) const;
 
 private:
-    Scene() = default;
-
     std::unordered_set<std::shared_ptr<Composable>> _composables{};
 };

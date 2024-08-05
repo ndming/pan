@@ -22,6 +22,7 @@ public:
     [[nodiscard]] vk::RenderPass getNativeRenderPass() const;
     [[nodiscard]] vk::SampleCountFlagBits getNativeSampleCount() const;
     [[nodiscard]] vk::SampleCountFlagBits getNativeMaxUsableSampleCount() const;
+    [[nodiscard]] const vk::Framebuffer& getNativeFramebufferAt(uint32_t imageIndex) const;
 
 private:
     SwapChain(
@@ -30,8 +31,12 @@ private:
         const EngineFeature& feature,
         const std::vector<const char*>& extensions);
 
+    // "Internal" operations
     void init(const vk::Device& device, ResourceAllocator* allocator);
+    bool acquire(const vk::Device& device, uint64_t timeout, const vk::Semaphore& semaphore, uint32_t* imageIndex);
+    void present(const vk::Device& device, uint32_t imageIndex, const vk::Semaphore& semaphore);
 
+    // Truly private operations
     void createSwapChain(const vk::Device& device);
     void createImageViews(const vk::Device& device);
     void createColorResources(const vk::Device& device);
@@ -51,10 +56,15 @@ private:
     GLFWwindow* _window;
     vk::SurfaceKHR _surface;
 
+    bool _framebufferResized{ false };
+    static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
     vk::PhysicalDevice _physicalDevice;
     std::optional<uint32_t> _graphicsFamily;
     std::optional<uint32_t> _presentFamily;
     std::optional<uint32_t> _computeFamily;
+
+    vk::Queue _presentQueue{};
 
     // Vulkan does not have the concept of a "default framebuffer", hence it requires an infrastructure that will
     // own the buffers we will render to before we visualize them on the screen. The swap chain is essentially a queue
@@ -96,4 +106,7 @@ private:
     // The Engine needs access to the constructor and initSwapChain method when creating and populating the SwapChain
     // These are the cases where an 'internal' access specifier like that from the Kotlin language comes in handy
     friend class Engine;
+
+    // Likewise, the Renderer needs access to the acquire and present methods of SwapChain
+    friend class Renderer;
 };

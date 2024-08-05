@@ -44,6 +44,7 @@ public:
     [[nodiscard]] uint32_t getLimitPushConstantSize() const;
     [[nodiscard]] uint32_t getLimitMinUniformBufferOffsetAlignment() const;
 
+    [[nodiscard]] vk::Instance getNativeInstance() const;
     [[nodiscard]] vk::Device getNativeDevice() const;
     [[nodiscard]] vk::Queue getNativeTransferQueue() const;
     [[nodiscard]] vk::CommandPool getNativeTransferCommandPool() const;

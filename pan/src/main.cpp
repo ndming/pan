@@ -7,6 +7,7 @@
 #include <engine/GraphicShader.h>
 #include <engine/IndexBuffer.h>
 #include <engine/VertexBuffer.h>
+#include <engine/Drawable.h>
 #include <engine/Scene.h>
 #include <engine/View.h>
 
@@ -19,21 +20,21 @@ struct Vertex {
 };
 
 static constexpr auto vertices = std::array{
-    Vertex{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } },
-    Vertex{ {  0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f } },
-    Vertex{ {  0.0f,  0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 0.0f } },
+    Vertex{ {  0.0f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+    Vertex{ {  0.5f,  0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+    Vertex{ { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
 };
 
 static constexpr auto positions = std::array{
-    glm::vec3{ -0.5f, -0.5f, 0.0f },
-    glm::vec3{  0.5f, -0.5f, 0.0f },
-    glm::vec3{  0.0f,  0.5f, 0.0f },
+    glm::vec3{  0.0f, -0.5f, 0.0f },
+    glm::vec3{ -0.5f,  0.5f, 0.0f },
+    glm::vec3{  0.5f,  0.5f, 0.0f },
 };
 
 static constexpr auto colors = std::array{
-    glm::vec4{ 1.0f, 0.0f, 0.0f, 0.0f },
-    glm::vec4{ 0.0f, 1.0f, 0.0f, 0.0f },
-    glm::vec4{ 0.0f, 0.0f, 1.0f, 0.0f },
+    glm::vec4{ 1.0f, 0.0f, 0.0f, 1.0f },
+    glm::vec4{ 0.0f, 1.0f, 0.0f, 1.0f },
+    glm::vec4{ 0.0f, 0.0f, 1.0f, 1.0f },
 };
 
 static constexpr auto indices = std::array<uint16_t, 3>{ 0, 1, 2 };
@@ -77,12 +78,23 @@ int main(int argc, char* argv[]) {
 
         const auto shaderInstance = shader->createInstance(*engine);
 
-        // Create a view and a scene
-        const auto view = View::create(*swapChain);
+        const auto triangle = Drawable::Builder(1)
+            .geometry(0, Drawable::Topology::TriangleList, vertexBuffer, indexBuffer, 3)
+            .material(0, shaderInstance)
+            .build(*engine);
+
+        // Create a scene
         const auto scene = Scene::create();
+        scene->insert(triangle);
+
+        // Create a view
+        const auto view = View::create(*swapChain);
+        view->setScene(scene);
 
         // The render loop
-        context->loop([] {});
+        context->loop([&] {
+            renderer->render(view, swapChain);
+        });
 
         // When we exit the loop, drawing and presentation operations may still be going on.
         // Cleaning up resources while that is happening is a bad idea.
