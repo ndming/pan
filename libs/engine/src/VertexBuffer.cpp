@@ -65,17 +65,17 @@ vk::Format VertexBuffer::Builder::getFormat(const AttributeFormat format) {
     using enum AttributeFormat;
     switch (format) {
         case Float:  return vk::Format::eR32Sfloat;
-        case Vec2:   return vk::Format::eR32G32Sfloat;
-        case Vec3:   return vk::Format::eR32G32B32Sfloat;
-        case Vec4:   return vk::Format::eR32G32B32A32Sfloat;
+        case Float2:   return vk::Format::eR32G32Sfloat;
+        case Float3:   return vk::Format::eR32G32B32Sfloat;
+        case Float4:   return vk::Format::eR32G32B32A32Sfloat;
         case Uint:   return vk::Format::eR32Uint;
-        case Uvec2:  return vk::Format::eR32G32Uint;
-        case Uvec3:  return vk::Format::eR32G32B32Uint;
-        case Uvec4:  return vk::Format::eR32G32B32A32Uint;
+        case Uint2:  return vk::Format::eR32G32Uint;
+        case Uint3:  return vk::Format::eR32G32B32Uint;
+        case Uint4:  return vk::Format::eR32G32B32A32Uint;
         case Int:    return vk::Format::eR32Sint;
-        case Ivec2:  return vk::Format::eR32G32Sint;
-        case Ivec3:  return vk::Format::eR32G32B32Sint;
-        case Ivec4:  return vk::Format::eR32G32B32A32Sint;
+        case Int2:  return vk::Format::eR32G32Sint;
+        case Int3:  return vk::Format::eR32G32B32Sint;
+        case Int4:  return vk::Format::eR32G32B32A32Sint;
         case Double: return vk::Format::eR64Sfloat;
         default:     return vk::Format::eUndefined;
     }

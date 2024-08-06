@@ -9,12 +9,17 @@
 
 class SwapChain;
 class View;
+class Overlay;
 
 
 class Renderer {
 public:
     void render(
         const std::unique_ptr<View>& view, SwapChain* swapChain,
+        const std::function<void(uint32_t)>& onFrameBegin = [](const uint32_t) {});
+
+    void render(
+        const std::unique_ptr<View>& view, const std::shared_ptr<Overlay>& overlay, SwapChain* swapChain,
         const std::function<void(uint32_t)>& onFrameBegin = [](const uint32_t) {});
 
     static constexpr int getMaxFramesInFlight() { return MAX_FRAMES_IN_FLIGHT; }
@@ -26,7 +31,11 @@ private:
         const vk::Device& device,
         PFN_vkCmdSetPolygonModeEXT vkCmdSetPolygonMode);
 
-    void renderView(const std::unique_ptr<View>& view, uint32_t imageIndex, const SwapChain* swapChain) const;
+    void renderView(const std::unique_ptr<View>& view) const;
+    void renderOverlay(const std::shared_ptr<Overlay>& overlay) const;
+
+    bool begineFrame(SwapChain* swapChain, const std::function<void(uint32_t)>& onFrameBegin, uint32_t* imageIndex) const;
+    void endFrame(uint32_t imageIndex, SwapChain* swapChain) const;
 
     vk::CommandPool _graphicsCommandPool;
     vk::Queue _graphicsQueue;
@@ -45,7 +54,15 @@ private:
     // Which in-flight frame we are current at (frame index)
     uint32_t _currentFrame{ 0 };
 
+    // Allow us to record dynamic polygon mode state to the command byffer. Because the vkCmdSetPolygonModeEXT
+    // is an extension function, we have to manually load it ourself
     PFN_vkCmdSetPolygonModeEXT _vkCmdSetPolygonMode;
+
+    // The clear values per render pass attachment. The order should be identical to the order we specified
+    // the render pass attachments
+    static constexpr auto CLEAR_VALUES = std::array<vk::ClearValue, 1>{
+        vk::ClearColorValue{ 0.0f, 0.0f, 0.0f, 1.0f },  // for the multi-sampled color attachment
+    };
 
     // Would be better if we have an "internal" access specifier
     friend class Engine;

@@ -207,8 +207,8 @@ void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
 Renderer* Engine::createRenderer() const {
     // We will be recording a command buffer every frame, so we want to be able to reset and re-record over it
     const auto graphicsCommandPool = _device.createCommandPool(
-        { vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _swapChain->_graphicsFamily.value() });
-    const auto graphicsQueue = _device.getQueue(_swapChain->_graphicsFamily.value(), 0);
+        { vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _swapChain->getGraphicsQueueFamily() });
+    const auto graphicsQueue = _device.getQueue(_swapChain->getGraphicsQueueFamily(), 0);
     const auto func = reinterpret_cast<PFN_vkCmdSetPolygonModeEXT>(vkGetInstanceProcAddr(_instance, "vkCmdSetPolygonModeEXT"));
     return new Renderer{ graphicsCommandPool, graphicsQueue, _device, func };
 }

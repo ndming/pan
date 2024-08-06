@@ -11,6 +11,7 @@ set(SRCS
         src/Engine.cpp
         src/GraphicShader.cpp
         src/IndexBuffer.cpp
+        src/Overlay.cpp
         src/Renderer.cpp
         src/Scene.cpp
         src/Shader.cpp
@@ -44,6 +45,7 @@ target_include_directories(${TARGET} PRIVATE src)
 # Dependencies
 target_link_libraries(${TARGET} PUBLIC plog::plog)
 target_link_libraries(${TARGET} PUBLIC glm::glm)
+target_link_libraries(${TARGET} PUBLIC gui)
 target_link_libraries(${TARGET} PRIVATE glfw)
 target_link_libraries(${TARGET} PRIVATE ${Vulkan_LIBRARIES})
 

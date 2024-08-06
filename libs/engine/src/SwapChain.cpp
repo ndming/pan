@@ -115,16 +115,16 @@ void SwapChain::createSwapChain(const vk::Device &device) {
     // We have to decide how many images we would like to have in the swap chain. Simply sticking to the minimum
     // means that we may sometimes have to wait on the driver to complete internal operations before we can acquire
     // another image to render to. Therefore, it is recommended to request at least one more image than the minimum
-    auto minImageCount = capabilities.minImageCount + 1;
+    _minImageCount = capabilities.minImageCount + 1;
     // We should also make sure to not exceed the maximum number of images while doing this, where 0 is a special value
     // that means that there is no maximum
-    if (capabilities.maxImageCount > 0 && minImageCount > capabilities.maxImageCount) {
-        minImageCount = capabilities.maxImageCount;
+    if (capabilities.maxImageCount > 0 && _minImageCount > capabilities.maxImageCount) {
+        _minImageCount = capabilities.maxImageCount;
     }
 
     auto createInfo = vk::SwapchainCreateInfoKHR{};
     createInfo.surface = _surface;
-    createInfo.minImageCount = minImageCount;
+    createInfo.minImageCount = _minImageCount;
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = extent;
@@ -219,7 +219,7 @@ void SwapChain::createRenderPass(const vk::Device& device) {
     const auto attachments = std::array{ colorAttachment, colorAttachmentResolve };
 
     static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
-    // Instruct the render pass to resolve multisampled color image into regular attachment
+    // Instruct the render pass to resolve the multisampled color image into a presentable attachment
     static constexpr auto colorAttachmentResolveRef = vk::AttachmentReference{ 1, vk::ImageLayout::eColorAttachmentOptimal };
 
     constexpr auto subpass = vk::SubpassDescription{
@@ -248,18 +248,16 @@ void SwapChain::createRenderPass(const vk::Device& device) {
         vk::AccessFlagBits::eColorAttachmentWrite,  // dst access
     };
 
-    const auto renderPassInfo = vk::RenderPassCreateInfo{
-        {}, static_cast<uint32_t>(attachments.size()), attachments.data(), 1, &subpass, 1, &dependency };
+    const auto renderPassInfo = vk::RenderPassCreateInfo{ {}, attachments, subpass, dependency };
     _renderPass = device.createRenderPass(renderPassInfo);
 }
 
 void SwapChain::createFramebuffers(const vk::Device& device) {
     const auto toFramebuffer = [this, &device](const auto& swapChainImageView) {
-        const auto attachments = std::vector{ _colorImageView, swapChainImageView };
+        // Specify the image views that should be bound to the respective attachment descriptions in the render pass
+        const auto attachments = std::array{ _colorImageView, swapChainImageView };
         const auto framebufferInfo = vk::FramebufferCreateInfo{
-            {}, _renderPass,
-            static_cast<uint32_t>(attachments.size()), attachments.data(),
-            _imageExtent.width, _imageExtent.height,
+            {}, _renderPass, attachments, _imageExtent.width, _imageExtent.height,
             1  // Our swap chain images are single images, so the number of layers is 1
         };
         return device.createFramebuffer(framebufferInfo);
@@ -268,24 +266,6 @@ void SwapChain::createFramebuffers(const vk::Device& device) {
     // all of them because only a single subpass is running at the same time due to our semaphores.
     const auto framebuffers = _imageViews | std::ranges::views::transform(toFramebuffer);
     _framebuffers = std::vector(framebuffers.begin(), framebuffers.end());
-}
-
-vk::SurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
-    // Each VkSurfaceFormatKHR entry contains a format and a colorSpace member. The format member specifies the
-    // color channels and types. For the color space we’ll use sRGB, which is pretty much the standard color space for
-    // viewing and printing purposes, like the textures we’ll use later on
-    constexpr auto format = vk::Format::eB8G8R8A8Srgb;
-    // VK_FORMAT_B8G8R8A8_SRGB means that we store the B, G, R and alpha channels in that order with
-    // an 8 bit unsigned integer for a total of 32 bits per pixel. Because we're using sRGB, we should also use
-    // an sRGB color format, of which one of the most common ones is VK_FORMAT_B8G8R8A8_SRGB.
-    constexpr auto colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
-    const auto suitable = [](const auto& it){ return it.format == format && it.colorSpace == colorSpace; };
-    if (const auto found = std::ranges::find_if(availableFormats, suitable); found != availableFormats.end()) {
-        return *found;
-    }
-    // If our checkingfails then we could start ranking the available formats based on how "good" they are, but in
-    // most cases it’s okay to just settle with the first format that is specified
-    return availableFormats[0];
 }
 
 bool SwapChain::acquire(const vk::Device& device, const uint64_t timeout, const vk::Semaphore& semaphore, uint32_t* imageIndex) {
@@ -359,6 +339,24 @@ void SwapChain::cleanup(const vk::Device& device) const noexcept {
 
     // Get rid of the old swap chain
     device.destroySwapchainKHR(_swapChain);
+}
+
+vk::SurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
+    // Each VkSurfaceFormatKHR entry contains a format and a colorSpace member. The format member specifies the
+    // color channels and types. For the color space we’ll use sRGB, which is pretty much the standard color space for
+    // viewing and printing purposes, like the textures we’ll use later on
+    constexpr auto format = vk::Format::eB8G8R8A8Srgb;
+    // VK_FORMAT_B8G8R8A8_SRGB means that we store the B, G, R and alpha channels in that order with
+    // an 8 bit unsigned integer for a total of 32 bits per pixel. Because we're using sRGB, we should also use
+    // an sRGB color format, of which one of the most common ones is VK_FORMAT_B8G8R8A8_SRGB.
+    constexpr auto colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
+    const auto suitable = [](const auto& it){ return it.format == format && it.colorSpace == colorSpace; };
+    if (const auto found = std::ranges::find_if(availableFormats, suitable); found != availableFormats.end()) {
+        return *found;
+    }
+    // If our checkingfails then we could start ranking the available formats based on how "good" they are, but in
+    // most cases it’s okay to just settle with the first format that is specified
+    return availableFormats[0];
 }
 
 vk::PresentModeKHR SwapChain::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> &availablePresentModes) {
@@ -442,6 +440,22 @@ void SwapChain::setOnFramebufferResize(std::function<void(uint32_t, uint32_t)>&&
 
 float SwapChain::getAspectRatio() const {
     return static_cast<float>(_imageExtent.width) /  static_cast<float>(_imageExtent.height);
+}
+
+uint32_t SwapChain::getGraphicsQueueFamily() const {
+    return _graphicsFamily.value();
+}
+
+uint32_t SwapChain::getImageCount() const {
+    return _imageViews.size();
+}
+
+uint32_t SwapChain::getMinImageCount() const {
+    return _minImageCount;
+}
+
+vk::PhysicalDevice SwapChain::getNativePhysicalDevice() const {
+    return _physicalDevice;
 }
 
 vk::Extent2D SwapChain::getNativeSwapImageExtent() const {

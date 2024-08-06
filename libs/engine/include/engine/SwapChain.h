@@ -34,7 +34,11 @@ public:
     void setOnFramebufferResize(std::function<void(uint32_t, uint32_t)>&& callback) noexcept;
 
     [[nodiscard]] float getAspectRatio() const;
+    [[nodiscard]] uint32_t getGraphicsQueueFamily() const;
+    [[nodiscard]] uint32_t getImageCount() const;
+    [[nodiscard]] uint32_t getMinImageCount() const;
 
+    [[nodiscard]] vk::PhysicalDevice getNativePhysicalDevice() const;
     [[nodiscard]] vk::Extent2D getNativeSwapImageExtent() const;
     [[nodiscard]] vk::RenderPass getNativeRenderPass() const;
     [[nodiscard]] vk::SampleCountFlagBits getNativeSampleCount() const;
@@ -104,6 +108,7 @@ private:
     std::vector<vk::ImageView> _imageViews{};
     vk::Format _imageFormat{ vk::Format::eUndefined };
     vk::Extent2D _imageExtent{};
+    uint32_t _minImageCount{ 0 };
 
     // Color attachment (render target)
     vk::Image _colorImage{};

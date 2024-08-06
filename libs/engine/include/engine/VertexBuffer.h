@@ -18,17 +18,17 @@ enum class AttributeFormat {
     /**
      * A 2-component vector of 32-bit floats
      */
-    Vec2,
+    Float2,
 
     /**
      * A 3-component vector of 32-bit floats
      */
-    Vec3,
+    Float3,
 
     /**
      * A 4-component vector of 32-bit floats
      */
-    Vec4,
+    Float4,
 
     /**
      * A 32-bit unsigned integer
@@ -38,17 +38,17 @@ enum class AttributeFormat {
     /**
      * A 2-component vector of 32-bit unsigned integers
      */
-    Uvec2,
+    Uint2,
 
     /**
      * A 3-component vector of 32-bit unsigned integers
      */
-    Uvec3,
+    Uint3,
 
     /**
      * A 4-component vector of 32-bit unsigned integers
      */
-    Uvec4,
+    Uint4,
 
     /**
      * A 32-bit signed integer
@@ -58,17 +58,17 @@ enum class AttributeFormat {
     /**
      * A 2-component vector of 32-bit signed integers
      */
-    Ivec2,
+    Int2,
 
     /**
      * A 3-component vector of 32-bit signed integers
      */
-    Ivec3,
+    Int3,
 
     /**
      * A 4-component vector of 32-bit signed integers
      */
-    Ivec4,
+    Int4,
 
     /**
      * A double-precision (64-bit) float

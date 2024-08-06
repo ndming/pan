@@ -1,3 +1,5 @@
+#include "gui.h"
+
 #include <plog/Log.h>
 #include <plog/Init.h>
 #include <plog/Appenders/ColorConsoleAppender.h>
@@ -10,6 +12,7 @@
 #include <engine/Drawable.h>
 #include <engine/Scene.h>
 #include <engine/View.h>
+#include <engine/Overlay.h>
 
 #include <glm/glm.hpp>
 
@@ -59,8 +62,8 @@ int main(int argc, char* argv[]) {
             .vertexCount(vertices.size())
             .binding(0, sizeof(glm::vec3))
             .binding(1, sizeof(glm::vec4))
-            .attribute(0, 0, AttributeFormat::Vec3)
-            .attribute(1, 1, AttributeFormat::Vec4)
+            .attribute(0, 0, AttributeFormat::Float3)
+            .attribute(1, 1, AttributeFormat::Float4)
             .build(*engine);
         vertexBuffer->setBindingData(0, positions.data(), *engine);
         vertexBuffer->setBindingData(1, colors.data(), *engine);
@@ -91,19 +94,28 @@ int main(int argc, char* argv[]) {
         const auto view = View::create(*swapChain);
         view->setScene(scene);
 
-        swapChain->setOnFramebufferResize([&view] (const auto width, const auto height) {
+        // Init the GUI overlay
+        Overlay::init(context->getSurface(), *engine, *swapChain);
+
+        swapChain->setOnFramebufferResize([&view, &swapChain] (const auto width, const auto height) {
             view->setViewport(0, 0, width, height);
             view->setScissor(0, 0, width, height);
+            Overlay::setMinImageCount(swapChain->getMinImageCount());
         });
+
+        const auto gui = std::make_shared<GUI>();
 
         // The render loop
         context->loop([&] {
-            renderer->render(view, swapChain);
+            renderer->render(view, gui, swapChain);
         });
 
         // When we exit the loop, drawing and presentation operations may still be going on.
         // Cleaning up resources while that is happening is a bad idea.
         engine->waitIdle();
+
+        // Destroy the GUI component
+        Overlay::teardown(*engine);
 
         // Destroy all rendering resources
         engine->destroyShaderInstance(shaderInstance);
