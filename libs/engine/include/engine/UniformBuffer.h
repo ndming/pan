@@ -19,7 +19,35 @@ public:
         std::size_t _dataSize{ 0 };
     };
 
+    /**
+     * Updates the portion of buffer content associated with the frame index, guranteed to complete prior to the next
+     * draw call.
+     *
+     * This operation shall be used to safely update the buffer content inside the render loop. The Renderer::render
+     * function accepts an optional lambda as its last parameter. This lambda provides the a frame index value which
+     * can be fed directly to this function.
+     *
+     * @param frameIndex The frame index provided by the callback of Renderer::render.
+     * @param data The new data to update this buffer, whose size conforms to the data byte size specified during
+     * buffer creation.
+     */
     void setBufferData(uint32_t frameIndex, const void* data) const;
+
+    /**
+     * Updates the buffer content. The transfer is guranteed to complete prior to the next draw call.
+     *
+     * Note that this operation must NOT be called inside the main render loop. Uniform buffers are frame-dependent
+     * resources, thus underhood, a UniformBuffer conceptually holds more than a single native buffer object, each
+     * dedicated to a certain in-flight frame. Because this function updates all the internal buffers at once, the
+     * content of some native buffer will change while its associated frame might be consuming it, causing artifacts.
+     *
+     * To safely update the buffer content in the main render loop, use the overload of this function that accepts
+     * a frame index parameter. Such an overload only updates the native buffer associated with the specified frame,
+     * avoiding race conditions.
+     *
+     * @param data The new data to update this buffer, whose size conforms to the data byte size specified during
+     * buffer creation.
+     */
     void setBufferData(const void* data) const;
 
     [[nodiscard]] std::size_t getBufferSize() const;

@@ -35,7 +35,11 @@ Renderer::Renderer(
     }
 }
 
-void Renderer::render(const std::unique_ptr<View>& view, SwapChain* const swapChain, const std::function<void(uint32_t)>& onFrameBegin) {
+void Renderer::render(
+    const std::unique_ptr<View>& view,
+    const std::shared_ptr<SwapChain>& swapChain,
+    const std::function<void(uint32_t)>& onFrameBegin
+) {
     // Try acquire an image from the swap chain
     uint32_t imageIndex;
     if (!begineFrame(swapChain, onFrameBegin, &imageIndex)) return;
@@ -67,7 +71,7 @@ void Renderer::render(const std::unique_ptr<View>& view, SwapChain* const swapCh
 void Renderer::render(
     const std::unique_ptr<View>& view,
     const std::shared_ptr<Overlay>& overlay,
-    SwapChain* const swapChain,
+    const std::shared_ptr<SwapChain>& swapChain,
     const std::function<void(uint32_t)>& onFrameBegin
 ) {
     // Try acquire an image from the swap chain
@@ -99,7 +103,11 @@ void Renderer::render(
     _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-bool Renderer::begineFrame(SwapChain* const swapChain, const std::function<void(uint32_t)>& onFrameBegin, uint32_t* imageIndex) const {
+bool Renderer::begineFrame(
+    const std::shared_ptr<SwapChain>& swapChain,
+    const std::function<void(uint32_t)>& onFrameBegin,
+    uint32_t* imageIndex
+) const {
     using limits = std::numeric_limits<uint64_t>;
 
     // At the start of the frame, we want to wait until the command buffer has finished all the rendering work
@@ -123,7 +131,7 @@ bool Renderer::begineFrame(SwapChain* const swapChain, const std::function<void(
     return true;
 }
 
-void Renderer::endFrame(const uint32_t imageIndex, SwapChain* const swapChain) const {
+void Renderer::endFrame(const uint32_t imageIndex, const std::shared_ptr<SwapChain>& swapChain) const {
     // With a fully recorded command buffer, we can now submit it. First we need to specify which semaphores to wait on
     // before execution can begin. It should be the semaphore we gave the swap chain which will signal it when the
     // acquired image is available
@@ -155,7 +163,8 @@ void Renderer::renderView(const std::unique_ptr<View>& view) const {
     const auto scene = view->getScene();
     scene->forEach([this, &view](const std::shared_ptr<Composable>& composable) {
         const auto buffers = composable->recordDrawingCommands(
-            _currentFrame, _drawingCommandBuffers[_currentFrame], { 1.0f }, { 1.0f }, [this, &view](const vk::CommandBuffer& buffer) {
+            _currentFrame, _drawingCommandBuffers[_currentFrame], view->getCamera()->getCameraMatrix(),
+            /* current transform */ { 1.0f }, [this, &view](const vk::CommandBuffer& buffer) {
                 // Set all dynamic states
                 buffer.setViewport(0, view->getNativeViewport());
                 buffer.setScissor(0, view->getNativeScissor());

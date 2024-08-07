@@ -82,7 +82,7 @@ enum class AttributeFormat {
  * interleaved vertex data, or multiple bindings, each contains a single or certain number of vertex attributes.
  * Both binding and attribute information shall be specified through the VertexBuffer::Builder class. Regardless of
  * which binding scheme is used, there will only be a single native buffer object created internally to promote
- * cache locality. In the case of multiple bindings, the class use offset values internally to manage them.
+ * cache locality. In the case of multiple bindings, the class use offset values to manage them.
  */
 class VertexBuffer final : public Buffer {
 public:
@@ -91,7 +91,7 @@ public:
         explicit Builder(int bindingCount);
 
         /**
-         * Specify the number of vertices for this vertex buffer.
+         * Specifies the number of vertices for this vertex buffer.
          *
          * @param count The number of vertices, will be set for all bindings
          * @return this Builder object for chaining calls.
@@ -99,7 +99,7 @@ public:
         Builder& vertexCount(int count);
 
         /**
-         * Add a binding description to this vertex buffer.
+         * Adds a binding description to this vertex buffer.
          *
          * @param binding The binding to configure in this buffer and must range from 0 to bindingCount - 1.
          * @param byteStride The byte stride between consecutive elements within this binding, corresponding to how many
@@ -111,7 +111,7 @@ public:
         Builder& binding(uint32_t binding, uint32_t byteStride);
 
         /**
-         * Add an attribute description to this vertex buffer set.
+         * Adds an attribute description to this vertex buffer set.
          * 
          * @param binding The binding from which vertex data of this attribute orginates.
          * @param location the location of this attribute in the vertex shader code.

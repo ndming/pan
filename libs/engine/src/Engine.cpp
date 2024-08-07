@@ -76,7 +76,7 @@ Engine::Engine(GLFWwindow* const window, const EngineFeature& feature) {
     auto deviceExtensions = std::vector(mDeviceExtensions.begin(), mDeviceExtensions.end());
     deviceExtensions.push_back(vk::KHRSwapchainExtensionName);   // to present to a surface
     try {
-        _swapChain = new SwapChain{ window, _instance, feature, deviceExtensions };
+        _swapChain = std::make_shared<SwapChain>(window, _instance, feature, deviceExtensions);
     } catch (const std::exception&) {
 #ifndef NDEBUG
         DebugMessenger::destroy(_instance, _debugMessenger);
@@ -181,8 +181,7 @@ void Engine::destroy() noexcept {
 
     _device.destroy(nullptr);
 
-    delete _swapChain;
-    _swapChain = nullptr;
+    _swapChain.reset();
 #ifndef NDEBUG
     DebugMessenger::destroy(_instance, _debugMessenger);
 #endif
@@ -190,13 +189,13 @@ void Engine::destroy() noexcept {
 }
 
 
-SwapChain* Engine::createSwapChain(const SwapChain::MSAA level) const {
+std::shared_ptr<SwapChain> Engine::createSwapChain(const SwapChain::MSAA level) const {
     // Create a native Vulkan swap chain object and populate its resources
     _swapChain->init(_device, _allocator, level);
     return _swapChain;
 }
 
-void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
+void Engine::destroySwapChain(const std::shared_ptr<SwapChain>& swapChain) const noexcept {
     _device.destroyRenderPass(swapChain->_renderPass);
     swapChain->cleanup(_device);
     _instance.destroySurfaceKHR(swapChain->_surface);
@@ -204,22 +203,21 @@ void Engine::destroySwapChain(SwapChain* const swapChain) const noexcept {
 }
 
 
-Renderer* Engine::createRenderer() const {
+std::unique_ptr<Renderer> Engine::createRenderer() const {
     // We will be recording a command buffer every frame, so we want to be able to reset and re-record over it
     const auto graphicsCommandPool = _device.createCommandPool(
         { vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _swapChain->getGraphicsQueueFamily() });
     const auto graphicsQueue = _device.getQueue(_swapChain->getGraphicsQueueFamily(), 0);
     const auto func = reinterpret_cast<PFN_vkCmdSetPolygonModeEXT>(vkGetInstanceProcAddr(_instance, "vkCmdSetPolygonModeEXT"));
-    return new Renderer{ graphicsCommandPool, graphicsQueue, _device, func };
+    return std::unique_ptr<Renderer>(new Renderer{ graphicsCommandPool, graphicsQueue, _device, func });
 }
 
-void Engine::destroyRenderer(Renderer* const renderer) const noexcept {
+void Engine::destroyRenderer(const std::unique_ptr<Renderer>& renderer) const noexcept {
     using namespace std::ranges;
     for_each(renderer->_drawingFences, [this](const auto& it) { _device.destroyFence(it); });
     for_each(renderer->_renderFinishedSemaphores, [this](const auto& it) { _device.destroySemaphore(it); });
     for_each(renderer->_imageAvailableSemaphores, [this](const auto& it) { _device.destroySemaphore(it); });
     _device.destroyCommandPool(renderer->_graphicsCommandPool);
-    delete renderer;
 }
 
 

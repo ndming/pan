@@ -1,14 +1,14 @@
 #pragma once
 
+#include "engine/Camera.h"
+#include "engine/Scene.h"
+
 #include <vulkan/vulkan.hpp>
 
 #include <cstdint>
 #include <memory>
 
 
-class Engine;
-struct EngineFeature;
-class Scene;
 class SwapChain;
 
 
@@ -32,6 +32,9 @@ public:
     };
 
     [[nodiscard]] static std::unique_ptr<View> create(const SwapChain& swapChain);
+
+    void setCamera(const std::shared_ptr<Camera>& camera);
+    [[nodiscard]] std::shared_ptr<Camera> getCamera() const;
 
     void setScene(const std::shared_ptr<Scene>& scene);
     [[nodiscard]] std::shared_ptr<Scene> getScene() const;
@@ -60,7 +63,8 @@ public:
 private:
     explicit View(const vk::Extent2D& swapImageExtent);
 
-    std::shared_ptr<Scene> _scene{};
+    std::shared_ptr<Scene> _scene{ Scene::create() };
+    std::shared_ptr<Camera> _camera{ Camera::create() };
 
     vk::Viewport _viewport;
     vk::Rect2D _scissor;

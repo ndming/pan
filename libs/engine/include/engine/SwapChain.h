@@ -47,13 +47,13 @@ public:
     SwapChain(const SwapChain&) = delete;
     SwapChain& operator=(const SwapChain&) = delete;
 
-private:
     SwapChain(
         GLFWwindow* window,
         const vk::Instance& instance,
         const EngineFeature& feature,
         const std::vector<const char*>& extensions);
 
+private:
     // "Internal" operations
     void init(const vk::Device& device, ResourceAllocator* allocator, MSAA level);
     bool acquire(const vk::Device& device, uint64_t timeout, const vk::Semaphore& semaphore, uint32_t* imageIndex);

@@ -11,6 +11,14 @@ std::unique_ptr<View> View::create(const SwapChain& swapChain) {
     return std::unique_ptr<View>(new View{ swapChain.getNativeSwapImageExtent() });
 }
 
+void View::setCamera(const std::shared_ptr<Camera>& camera) {
+    _camera = camera;
+}
+
+std::shared_ptr<Camera> View::getCamera() const {
+    return _camera;
+}
+
 void View::setScene(const std::shared_ptr<Scene>& scene) {
     _scene = scene;
 }

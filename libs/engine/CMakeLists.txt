@@ -4,6 +4,7 @@ set(TARGET engine)
 
 set(SRCS
         src/Buffer.cpp
+        src/Camera.cpp
         src/Composable.cpp
         src/ComputeShader.cpp
         src/Context.cpp

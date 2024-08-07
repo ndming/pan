@@ -15,11 +15,14 @@ class Overlay;
 class Renderer {
 public:
     void render(
-        const std::unique_ptr<View>& view, SwapChain* swapChain,
+        const std::unique_ptr<View>& view,
+        const std::shared_ptr<SwapChain>& swapChain,
         const std::function<void(uint32_t)>& onFrameBegin = [](const uint32_t) {});
 
     void render(
-        const std::unique_ptr<View>& view, const std::shared_ptr<Overlay>& overlay, SwapChain* swapChain,
+        const std::unique_ptr<View>& view,
+        const std::shared_ptr<Overlay>& overlay,
+        const std::shared_ptr<SwapChain>& swapChain,
         const std::function<void(uint32_t)>& onFrameBegin = [](const uint32_t) {});
 
     static constexpr int getMaxFramesInFlight() { return MAX_FRAMES_IN_FLIGHT; }
@@ -34,8 +37,11 @@ private:
     void renderView(const std::unique_ptr<View>& view) const;
     void renderOverlay(const std::shared_ptr<Overlay>& overlay) const;
 
-    bool begineFrame(SwapChain* swapChain, const std::function<void(uint32_t)>& onFrameBegin, uint32_t* imageIndex) const;
-    void endFrame(uint32_t imageIndex, SwapChain* swapChain) const;
+    bool begineFrame(
+        const std::shared_ptr<SwapChain>& swapChain,
+        const std::function<void(uint32_t)>& onFrameBegin,
+        uint32_t* imageIndex) const;
+    void endFrame(uint32_t imageIndex, const std::shared_ptr<SwapChain>& swapChain) const;
 
     vk::CommandPool _graphicsCommandPool;
     vk::Queue _graphicsQueue;

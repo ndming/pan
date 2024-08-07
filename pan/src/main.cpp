@@ -1,6 +1,5 @@
 #include "gui.h"
 
-#include <plog/Log.h>
 #include <plog/Init.h>
 #include <plog/Appenders/ColorConsoleAppender.h>
 #include <plog/Formatters/TxtFormatter.h>
@@ -10,7 +9,6 @@
 #include <engine/IndexBuffer.h>
 #include <engine/VertexBuffer.h>
 #include <engine/Drawable.h>
-#include <engine/Scene.h>
 #include <engine/View.h>
 #include <engine/Overlay.h>
 
@@ -90,16 +88,22 @@ int main(int argc, char* argv[]) {
         const auto scene = Scene::create();
         scene->insert(triangle);
 
+        // Create a camera
+        const auto camera = Camera::create();
+        camera->setLookAt({ 2.0f, 2.0f, -2.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f });
+        camera->setProjection(glm::radians(45.0f), swapChain->getAspectRatio(), 0.1f, 10.0f);
+
         // Create a view
         const auto view = View::create(*swapChain);
         view->setScene(scene);
+        view->setCamera(camera);
 
         // Init the GUI overlay
         Overlay::init(context->getSurface(), *engine, *swapChain);
 
-        swapChain->setOnFramebufferResize([&view, &swapChain] (const auto width, const auto height) {
-            view->setViewport(0, 0, width, height);
-            view->setScissor(0, 0, width, height);
+        swapChain->setOnFramebufferResize([&view, &swapChain, &camera] (const auto width, const auto height) {
+            camera->setProjection(glm::radians(45.0f), swapChain->getAspectRatio(), 0.1f, 10.0f);
+            view->setViewport(0, 0, width, height); view->setScissor(0, 0, width, height);
             Overlay::setMinImageCount(swapChain->getMinImageCount());
         });
 
@@ -122,8 +126,8 @@ int main(int argc, char* argv[]) {
         engine->destroyShader(shader);
         engine->destroyBuffer(indexBuffer);
         engine->destroyBuffer(vertexBuffer);
-        engine->destroySwapChain(swapChain);
         engine->destroyRenderer(renderer);
+        engine->destroySwapChain(swapChain);
         engine->destroy();
 
         // Destroy the window context
