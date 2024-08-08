@@ -87,15 +87,7 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
         ePolygonModeEXT,            // vk::PipelineRasterizationStateCreateInfo
         eCullMode,                  // ...
         eFrontFace,                 // ...
-        eLineWidth,
-        // TODO: add support for depth test
-        // eDepthTestEnable,           // vk::PipelineDepthStencilStateCreateInfo
-        // eDepthWriteEnable,          // ...
-        // eDepthCompareOp,            // ...
-        // eDepthBoundsTestEnable,     // ...
-        // eStencilTestEnable,         // ...
-        // eStencilOp,                 // ...
-        // eDepthBounds,               // ...
+        eLineWidth,                 // ...
     };
 
     // These values will be able to configure at runtime
@@ -116,11 +108,28 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
         PLOGW << "Using min sample shading without having enabled it: "
                  "enable this feature via EngineFeature during Engine creation";
     }
-    const auto multisampling = vk::PipelineMultisampleStateCreateInfo{
+    auto multisampling = vk::PipelineMultisampleStateCreateInfo{
         {}, swapChain.getNativeSampleCount(), feature.sampleShading, _minSampleShading, nullptr, vk::False, vk::False };
+    multisampling.rasterizationSamples = swapChain.getNativeSampleCount();
+    multisampling.sampleShadingEnable = feature.sampleShading;
+    multisampling.minSampleShading = _minSampleShading;
+    multisampling.pSampleMask = nullptr;
+    multisampling.alphaToCoverageEnable = vk::False;
+    multisampling.alphaToOneEnable = vk::False;
 
-    // TODO: enable depth test
-    constexpr auto depthStencil = vk::PipelineDepthStencilStateCreateInfo{  {}, vk::False, vk::False };
+    // Depth stencil options
+    auto depthStencil = vk::PipelineDepthStencilStateCreateInfo{};
+    depthStencil.depthTestEnable = vk::True;
+    depthStencil.depthWriteEnable = vk::True;
+    depthStencil.depthCompareOp = vk::CompareOp::eLess;
+    // Optional depth bount test
+    depthStencil.depthBoundsTestEnable = vk::False;
+    depthStencil.minDepthBounds = 0.0f;
+    depthStencil.maxDepthBounds = 1.0f;
+    // Optional stencil test
+    depthStencil.stencilTestEnable = vk::False;
+    depthStencil.front = vk::StencilOp::eZero;
+    depthStencil.back = vk::StencilOp::eZero;
 
     // TODO: add suport for color blending
     auto colorBlendAttachment = vk::PipelineColorBlendAttachmentState{};

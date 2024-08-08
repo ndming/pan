@@ -99,6 +99,7 @@ void SwapChain::init(const vk::Device& device, ResourceAllocator* const allocato
     createSwapChain(device);
     createImageViews(device);
     createColorResources(device);
+    createDepthResources(device);
     createRenderPass(device);
     createFramebuffers(device);
 }
@@ -194,6 +195,36 @@ void SwapChain::createColorResources(const vk::Device& device) {
     _colorImageView = device.createImageView(viewInfo);
 }
 
+void SwapChain::createDepthResources(const vk::Device& device) {
+    // The candidate formats for depth attachment must have the D in their name. Unlike the texture image, we don’t
+    // necessarily need a specific format, because we won’t be directly accessing the texels from the program.  It just
+    // needs to have a reasonable accuracy, at least 24 bits is common in real-world applications.
+    const auto formatCandidates = std::vector{
+        vk::Format::eD32Sfloat,        // 32-bit float for depth
+        vk::Format::eD32SfloatS8Uint,  // 32-bit signed float for depth and 8 bit stencil component
+        vk::Format::eD24UnormS8Uint,   // 24-bit float for depth and 8 bit stencil component
+    };
+    // Choose the desired depth format
+    using Tiling = vk::ImageTiling;
+    using Feature = vk::FormatFeatureFlagBits;
+    _depthFormat = findSupportedFormat(formatCandidates, Tiling::eOptimal, Feature::eDepthStencilAttachment);
+
+    constexpr auto mipLevels = 1;
+    constexpr auto aspectFlags = vk::ImageAspectFlagBits::eDepth;
+
+    // Create a depth attachment
+    auto allocation = VmaAllocation{};
+    _depthImage = _allocator->allocateDedicatedImage(
+        _imageExtent.width, _imageExtent.height, 1, mipLevels, _msaaSamples, vk::ImageType::e2D,
+        _depthFormat, Tiling::eOptimal, vk::ImageUsageFlagBits::eDepthStencilAttachment, &allocation);
+    _depthImageAllocation = allocation;
+
+    // Create depth image view
+    const auto viewInfo = vk::ImageViewCreateInfo{
+        {}, _depthImage, vk::ImageViewType::e2D, _depthFormat, {}, { aspectFlags, 0, mipLevels, 0, 1 } };
+    _depthImageView = device.createImageView(viewInfo);
+}
+
 void SwapChain::createRenderPass(const vk::Device& device) {
     const auto colorAttachment = vk::AttachmentDescription{
         {}, _imageFormat, _msaaSamples,
@@ -203,6 +234,15 @@ void SwapChain::createRenderPass(const vk::Device& device) {
         vk::AttachmentStoreOp::eDontCare,
         vk::ImageLayout::eUndefined,
         vk::ImageLayout::eColorAttachmentOptimal
+    };
+    const auto depthAttachment = vk::AttachmentDescription{
+        {}, _depthFormat, _msaaSamples,
+        vk::AttachmentLoadOp::eClear,
+        vk::AttachmentStoreOp::eDontCare,  // we're not using depth values after drawing has finished
+        vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eDontCare,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eDepthStencilAttachmentOptimal
     };
     const auto colorAttachmentResolve = vk::AttachmentDescription{
         {}, _imageFormat, vk::SampleCountFlagBits::e1,
@@ -216,17 +256,18 @@ void SwapChain::createRenderPass(const vk::Device& device) {
 
     // We should keep the order we specify these attachments in mind because later on we will have to specify
     // clear values for them in the same order
-    const auto attachments = std::array{ colorAttachment, colorAttachmentResolve };
+    const auto attachments = std::array{ colorAttachment, depthAttachment, colorAttachmentResolve };
 
     static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
-    // Instruct the render pass to resolve the multisampled color image into a presentable attachment
-    static constexpr auto colorAttachmentResolveRef = vk::AttachmentReference{ 1, vk::ImageLayout::eColorAttachmentOptimal };
+    static constexpr auto depthAttachmentRef = vk::AttachmentReference{ 1, vk::ImageLayout::eDepthStencilAttachmentOptimal };
+    static constexpr auto colorAttachmentResolveRef = vk::AttachmentReference{ 2, vk::ImageLayout::eColorAttachmentOptimal };
 
     constexpr auto subpass = vk::SubpassDescription{
         {}, vk::PipelineBindPoint::eGraphics,
         {}, {},
         1, &colorAttachmentRef,
-        &colorAttachmentResolveRef    // let the render pass define a multisample resolve operation
+        &colorAttachmentResolveRef,
+        &depthAttachmentRef,
     };
 
     // Subpasses in a render pass automatically take care of image layout transitions. These transitions are controlled
@@ -239,13 +280,17 @@ void SwapChain::createRenderPass(const vk::Device& device) {
     // - In the Renderer, change the waitStages for the imageAvailableSemaphore to eTopOfPipe to ensure that the render
     // passes don’t begin until the image is available
     // - Make the render pass wait for the eColorAttachmentOutput stage, using subpass dependency
+    using Stage = vk::PipelineStageFlagBits;
+    using Access = vk::AccessFlagBits;
+    constexpr auto srcStages = Stage::eColorAttachmentOutput | Stage::eLateFragmentTests;
+    constexpr auto dstStages = Stage::eColorAttachmentOutput | Stage::eEarlyFragmentTests;
+    constexpr auto srcAccess = Access::eColorAttachmentWrite | Access::eDepthStencilAttachmentWrite;
+    constexpr auto dstAccess = Access::eColorAttachmentWrite | Access::eDepthStencilAttachmentWrite;
     constexpr auto dependency = vk::SubpassDependency{
         vk::SubpassExternal,  // src subpass
         0,                    // dst subpass
-        vk::PipelineStageFlagBits::eColorAttachmentOutput,  // src stage
-        vk::PipelineStageFlagBits::eColorAttachmentOutput,  // dst stage
-        vk::AccessFlagBits::eColorAttachmentWrite,  // src access
-        vk::AccessFlagBits::eColorAttachmentWrite,  // dst access
+        srcStages, dstStages,
+        srcAccess, dstAccess,
     };
 
     const auto renderPassInfo = vk::RenderPassCreateInfo{ {}, attachments, subpass, dependency };
@@ -255,7 +300,7 @@ void SwapChain::createRenderPass(const vk::Device& device) {
 void SwapChain::createFramebuffers(const vk::Device& device) {
     const auto toFramebuffer = [this, &device](const auto& swapChainImageView) {
         // Specify the image views that should be bound to the respective attachment descriptions in the render pass
-        const auto attachments = std::array{ _colorImageView, swapChainImageView };
+        const auto attachments = std::array{ _colorImageView, _depthImageView, swapChainImageView };
         const auto framebufferInfo = vk::FramebufferCreateInfo{
             {}, _renderPass, attachments, _imageExtent.width, _imageExtent.height,
             1  // Our swap chain images are single images, so the number of layers is 1
@@ -316,6 +361,7 @@ void SwapChain::recreate(const vk::Device& device) {
     createSwapChain(device);
     createImageViews(device);
     createColorResources(device);
+    createDepthResources(device);
     createFramebuffers(device);
 
     _customFramebufferResizeCallback(_imageExtent.width, _imageExtent.height);
@@ -329,7 +375,9 @@ void SwapChain::recreate(const vk::Device& device) {
 
 void SwapChain::cleanup(const vk::Device& device) const noexcept {
     // Destroy all attachments
+    device.destroyImageView(_depthImageView);
     device.destroyImageView(_colorImageView);
+    _allocator->destroyImage(_depthImage, static_cast<VmaAllocation>(_depthImageAllocation));
     _allocator->destroyImage(_colorImage, static_cast<VmaAllocation>(_colorImageAllocation));
 
     // Destroy the framebuffers and swap chain image views
@@ -428,6 +476,26 @@ vk::SampleCountFlagBits SwapChain::getOrFallbackSampleCount(const MSAA level, co
         PLOGE << "Received unvalid sample count: your device might not support MSAA";
         throw std::runtime_error("The device must support at least 2x MSAA");
     }
+}
+
+vk::Format SwapChain::findSupportedFormat(
+    const std::vector<vk::Format>& candidates,
+    const vk::ImageTiling tiling,
+    const vk::FormatFeatureFlags features
+) const {
+    // The support of a format depends on the tiling mode and usage, so we must also include these in the check
+    for (const auto format : candidates) {
+        const auto props = _physicalDevice.getFormatProperties(format);
+        if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
+            return format;
+        }
+        if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+
+    throw std::runtime_error("Failed to find supported format!");
+
 }
 
 void SwapChain::setOnFramebufferResize(const std::function<void(uint32_t, uint32_t)>& callback) {

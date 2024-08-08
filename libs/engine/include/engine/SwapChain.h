@@ -63,13 +63,14 @@ private:
     void createSwapChain(const vk::Device& device);
     void createImageViews(const vk::Device& device);
     void createColorResources(const vk::Device& device);
+    void createDepthResources(const vk::Device& device);
     void createRenderPass(const vk::Device& device);
     void createFramebuffers(const vk::Device& device);
 
     void recreate(const vk::Device& device);
     void cleanup(const vk::Device& device) const noexcept;
 
-    // Utility static methods
+    // Helpful static methods
     using SurfaceFormat = vk::SurfaceFormatKHR;
     using PresentMode = vk::PresentModeKHR;
     using SurfaceCapabilities = vk::SurfaceCapabilitiesKHR;
@@ -114,6 +115,14 @@ private:
     vk::Image _colorImage{};
     vk::ImageView _colorImageView{};
     void* _colorImageAllocation{ nullptr };
+
+    // Depth/stencil attachment
+    vk::Image _depthImage{};
+    vk::ImageView _depthImageView{};
+    void* _depthImageAllocation{ nullptr };
+    vk::Format _depthFormat{ vk::Format::eUndefined };
+    [[nodiscard]] vk::Format findSupportedFormat(
+        const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features) const;
 
     // To create framebuffers, we need to specify how many color and depth buffers there will be, how many samples to
     // use for each of them and how their contents should be handled throughout the rendering operations. All of this

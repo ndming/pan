@@ -66,8 +66,9 @@ private:
 
     // The clear values per render pass attachment. The order should be identical to the order we specified
     // the render pass attachments
-    static constexpr auto CLEAR_VALUES = std::array<vk::ClearValue, 1>{
+    static constexpr auto CLEAR_VALUES = std::array<vk::ClearValue, 2>{
         vk::ClearColorValue{ 0.0f, 0.0f, 0.0f, 1.0f },  // for the multi-sampled color attachment
+        vk::ClearDepthStencilValue{ /* depth */ 1.0f, /* stencil */ 0 },  // for the depth/stencil attachment
     };
 
     // Would be better if we have an "internal" access specifier

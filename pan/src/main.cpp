@@ -15,6 +15,7 @@
 #include <engine/Texture.h>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 
 struct Vertex {
@@ -110,6 +111,12 @@ int main(int argc, char* argv[]) {
         const auto shaderInstance = shader->createInstance(*engine);
         shaderInstance->setDescriptor(0, texture, sampler, *engine);
 
+        const auto square = Drawable::Builder(1)
+            .geometry(0, Drawable::Topology::TriangleList, vertexBuffer, indexBuffer, indices.size())
+            .material(0, shaderInstance)
+            .build(*engine);
+        square->setTransform(translate(glm::mat4{ 1.0f }, glm::vec3{ 0.0f, 0.0f, -0.5f }));
+
         const auto triangle = Drawable::Builder(1)
             .geometry(0, Drawable::Topology::TriangleList, vertexBuffer, indexBuffer, indices.size())
             .material(0, shaderInstance)
@@ -117,6 +124,7 @@ int main(int argc, char* argv[]) {
 
         // Create a scene
         const auto scene = Scene::create();
+        scene->insert(square);
         scene->insert(triangle);
 
         // Create a camera
