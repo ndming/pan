@@ -3,7 +3,9 @@
 #include "engine/Buffer.h"
 #include "engine/Context.h"
 #include "engine/Composable.h"
+#include "engine/Image.h"
 #include "engine/Renderer.h"
+#include "engine/Sampler.h"
 #include "engine/ShaderInstance.h"
 #include "engine/SwapChain.h"
 
@@ -15,6 +17,7 @@ class ResourceAllocator;
 
 struct EngineFeature {
     bool sampleShading{ false };
+    bool samplerAnisotropy{ false };
 }; // Any update to this struct requires an asscoiate update to the getPhysicalDeviceFeatures method
 
 
@@ -67,6 +70,10 @@ public:
 
     void destroyBuffer(const Buffer* buffer) const noexcept;
 
+    void destroyImage(const std::shared_ptr<Image>& image) const noexcept;
+
+    void destroySampler(const std::unique_ptr<Sampler>& sampler) const noexcept;
+
     void destroyShader(const Shader* shader) const noexcept;
     void destroyShaderInstance(const ShaderInstance* instance) const noexcept;
 
@@ -78,6 +85,7 @@ public:
     [[nodiscard]] const EngineFeature& getEngineFeature() const;
 
     [[nodiscard]] uint32_t getLimitPushConstantSize() const;
+    [[nodiscard]] float getLimitMaxSamplerAnisotropy() const;
     [[nodiscard]] uint32_t getLimitMinUniformBufferOffsetAlignment() const;
 
     [[nodiscard]] vk::Instance getNativeInstance() const;

@@ -43,7 +43,7 @@ UniformBuffer::UniformBuffer(
 ) : Buffer{ buffer, allocation, pMappedData }, _bufferSize{ bufferSize }, _dataSize{ dataSize } {
 }
 
-void UniformBuffer::setBufferData(const uint32_t frameIndex, const void* const data) const {
+void UniformBuffer::setData(const uint32_t frameIndex, const void* const data) const {
     // Memory in Vulkan doesn't need to be unmapped before using it on GPU, but unless a memory types has
     // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT flag set, we need to manually invalidate cache before reading of mapped
     // pointer and flush cache after writing to mapped pointer. Map/unmap operations don't do that automatically.
@@ -52,9 +52,9 @@ void UniformBuffer::setBufferData(const uint32_t frameIndex, const void* const d
     memcpy(_pMappedData + frameIndex * _bufferSize, data, _dataSize);
 }
 
-void UniformBuffer::setBufferData(const void* const data) const {
+void UniformBuffer::setData(const void* const data) const {
     for (uint32_t index = 0; index < Renderer::getMaxFramesInFlight(); ++index) {
-        setBufferData(index, data);
+        setData(index, data);
     }
 }
 

@@ -133,6 +133,9 @@ vk::PhysicalDeviceFeatures2 Engine::getPhysicalDeviceFeatures(const EngineFeatur
     if (feature.sampleShading) {
         basicFeatures.sampleRateShading = vk::True;
     }
+    if (feature.samplerAnisotropy) {
+        basicFeatures.samplerAnisotropy = vk::True;
+    }
 
     // Vertex input dynamic state features
     auto vertexInputDynamicStateFeatures = new vk::PhysicalDeviceVertexInputDynamicStateFeaturesEXT{};
@@ -226,6 +229,15 @@ void Engine::destroyBuffer(const Buffer* const buffer) const noexcept {
     delete buffer;
 }
 
+void Engine::destroyImage(const std::shared_ptr<Image>& image) const noexcept {
+    _device.destroyImageView(image->getNativeImageView());
+    _allocator->destroyImage(image->getNativeImage(), static_cast<VmaAllocation>(image->getAllocation()));
+}
+
+void Engine::destroySampler(const std::unique_ptr<Sampler>& sampler) const noexcept {
+    _device.destroySampler(sampler->getNativeSampler());
+}
+
 void Engine::destroyShader(const Shader* const shader) const noexcept {
     _device.destroyPipeline(shader->getNativePipeline());
     _device.destroyPipelineLayout(shader->getNativePipelineLayout());
@@ -250,6 +262,10 @@ const EngineFeature & Engine::getEngineFeature() const {
 
 uint32_t Engine::getLimitPushConstantSize() const {
     return _swapChain->_physicalDevice.getProperties().limits.maxPushConstantsSize;
+}
+
+float Engine::getLimitMaxSamplerAnisotropy() const {
+    return _swapChain->_physicalDevice.getProperties().limits.maxSamplerAnisotropy;
 }
 
 uint32_t Engine::getLimitMinUniformBufferOffsetAlignment() const {

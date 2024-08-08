@@ -36,42 +36,6 @@ ResourceAllocator* ResourceAllocator::Builder::build(
     return new ResourceAllocator{ allocator };
 }
 
-vk::Image ResourceAllocator::allocateColorAttachmentImage(
-    const uint32_t width,
-    const uint32_t height,
-    const uint32_t mipLevels,
-    const vk::SampleCountFlagBits sampleCount,
-    const vk::Format format,
-    const vk::ImageTiling tiling,
-    const vk::ImageUsageFlags usage,
-    VmaAllocation* allocation
-) const {
-    const auto imageInfo = vk::ImageCreateInfo{
-        {}, vk::ImageType::e2D, format, { width, height, 1 }, mipLevels, 1,
-        sampleCount, tiling, usage, vk::SharingMode::eExclusive };
-    const auto imageCreateInfo = static_cast<VkImageCreateInfo>(imageInfo);
-
-    auto allocInfo = VmaAllocationCreateInfo{};
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    // This flag is preferable for resources that are large and get destroyed or recreated with different sizes
-    allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-    // When VK_EXT_memory_priority extension is enabled, it is also worth setting high priority to such allocation
-    // to decrease chances to be evicted to system memory by the operating system
-    allocInfo.priority = 1.0f;
-
-    auto image = VkImage{};
-    if (vmaCreateImage(_allocator, &imageCreateInfo, &allocInfo, &image, allocation, nullptr) != VK_SUCCESS) {
-        PLOGE << "Could not create color attachment image";
-        throw std::runtime_error("Failed to create color attachment image");
-    }
-
-    return image;
-}
-
-void ResourceAllocator::destroyImage(const vk::Image& image, VmaAllocation allocation) const noexcept {
-    vmaDestroyImage(_allocator, image, allocation);
-}
-
 vk::Buffer ResourceAllocator::allocateDedicatedBuffer(
     const std::size_t bufferSize,
     const vk::BufferUsageFlags usage,
@@ -141,11 +105,58 @@ vk::Buffer ResourceAllocator::allocatePersistentBuffer(
     return buffer;
 }
 
+vk::Image ResourceAllocator::allocateDedicatedImage(
+    const uint32_t width,
+    const uint32_t height,
+    const uint32_t depth,
+    const uint32_t mipLevels,
+    const vk::SampleCountFlagBits sampleCount,
+    const vk::ImageType type,
+    const vk::Format format,
+    const vk::ImageTiling tiling,
+    const vk::ImageUsageFlags usage,
+    VmaAllocation* allocation
+) const {
+    auto imgCreateInfo = VkImageCreateInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    imgCreateInfo.extent.width = width;
+    imgCreateInfo.extent.height = height;
+    imgCreateInfo.extent.depth = depth;
+    imgCreateInfo.mipLevels = mipLevels;
+    imgCreateInfo.samples = static_cast<VkSampleCountFlagBits>(sampleCount);
+    imgCreateInfo.imageType = static_cast<VkImageType>(type);
+    imgCreateInfo.format = static_cast<VkFormat>(format);
+    imgCreateInfo.tiling = static_cast<VkImageTiling>(tiling);
+    imgCreateInfo.usage = static_cast<VkImageUsageFlags>(usage);
+    imgCreateInfo.arrayLayers = 1;
+    imgCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imgCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    auto allocInfo = VmaAllocationCreateInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    // This flag is preferable for resources that are large and get destroyed or recreated with different sizes
+    allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+    // When VK_EXT_memory_priority extension is enabled, it is also worth setting high priority to such allocation
+    // to decrease chances to be evicted to system memory by the operating system
+    allocInfo.priority = 1.0f;
+
+    auto image = VkImage{};
+    if (vmaCreateImage(_allocator, &imgCreateInfo, &allocInfo, &image, allocation, nullptr) != VK_SUCCESS) {
+        PLOGE << "Could not create a dedicated image";
+        throw std::runtime_error("Failed to create dedicated image");
+    }
+
+    return image;
+}
+
 void ResourceAllocator::destroyBuffer(const vk::Buffer& buffer, VmaAllocation allocation) const noexcept {
     vmaDestroyBuffer(_allocator, buffer, allocation);
 }
 
-void ResourceAllocator::mapData(const std::size_t bufferSize, const void* const data, VmaAllocation allocation) const {
+void ResourceAllocator::destroyImage(const vk::Image& image, VmaAllocation allocation) const noexcept {
+    vmaDestroyImage(_allocator, image, allocation);
+}
+
+void ResourceAllocator::mapAndCopyData(const std::size_t bufferSize, const void* const data, VmaAllocation allocation) const {
     void* mappedData;
     vmaMapMemory(_allocator, allocation, &mappedData);
     memcpy(mappedData, data, bufferSize);

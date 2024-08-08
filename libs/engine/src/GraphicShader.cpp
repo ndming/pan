@@ -104,7 +104,7 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
     constexpr auto inputAssembly = vk::PipelineInputAssemblyStateCreateInfo{};
 
     // While others depend on the requested features
-    const auto [sampleShading] = engine.getEngineFeature();
+    const auto feature = engine.getEngineFeature();
 
     // Rasterization
     auto rasterizer = vk::PipelineRasterizationStateCreateInfo{};
@@ -112,12 +112,12 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
     rasterizer.depthClampEnable = vk::False;
 
     // Multisampling options
-    if (!sampleShading && _minSampleShading > 0.0f) {
+    if (!feature.sampleShading && _minSampleShading > 0.0f) {
         PLOGW << "Using min sample shading without having enabled it: "
                  "enable this feature via EngineFeature during Engine creation";
     }
     const auto multisampling = vk::PipelineMultisampleStateCreateInfo{
-        {}, swapChain.getNativeSampleCount(), sampleShading, _minSampleShading, nullptr, vk::False, vk::False };
+        {}, swapChain.getNativeSampleCount(), feature.sampleShading, _minSampleShading, nullptr, vk::False, vk::False };
 
     // TODO: enable depth test
     constexpr auto depthStencil = vk::PipelineDepthStencilStateCreateInfo{  {}, vk::False, vk::False };

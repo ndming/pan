@@ -12,10 +12,10 @@ public:
     [[nodiscard]] vk::Buffer getNativeBuffer() const;
     [[nodiscard]] void* getAllocation() const;
 
+    virtual ~Buffer() = default;
+
     Buffer(const Buffer&) = delete;
     Buffer& operator=(const Buffer&) = delete;
-
-    virtual ~Buffer() = default;
 
 protected:
     Buffer(const vk::Buffer& buffer, void* allocation, std::byte* pMappedData = nullptr);

@@ -22,21 +22,38 @@ public:
         uint32_t _apiVersion{};
     };
 
-    vk::Image allocateColorAttachmentImage(
-        uint32_t width, uint32_t height, uint32_t mipLevels, vk::SampleCountFlagBits sampleCount,
-        vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, VmaAllocation* allocation) const;
+    vk::Buffer allocateDedicatedBuffer(
+        std::size_t bufferSize,
+        vk::BufferUsageFlags usage,
+        VmaAllocation* allocation) const;
 
-    void destroyImage(const vk::Image& image, VmaAllocation allocation) const noexcept;
-
-    vk::Buffer allocateDedicatedBuffer(std::size_t bufferSize, vk::BufferUsageFlags usage, VmaAllocation* allocation) const;
-    vk::Buffer allocateStagingBuffer(std::size_t bufferSize, VmaAllocation* allocation) const;
+    vk::Buffer allocateStagingBuffer(
+        std::size_t bufferSize,
+        VmaAllocation* allocation) const;
 
     vk::Buffer allocatePersistentBuffer(
-        std::size_t bufferSize, vk::BufferUsageFlags usage, VmaAllocation* allocation, VmaAllocationInfo* allocationInfo) const;
+        std::size_t bufferSize,
+        vk::BufferUsageFlags usage,
+        VmaAllocation* allocation,
+        VmaAllocationInfo* allocationInfo) const;
+
+    vk::Image allocateDedicatedImage(
+        uint32_t width,
+        uint32_t height,
+        uint32_t depth,
+        uint32_t mipLevels,
+        vk::SampleCountFlagBits sampleCount,
+        vk::ImageType type,
+        vk::Format format,
+        vk::ImageTiling tiling,
+        vk::ImageUsageFlags usage,
+        VmaAllocation* allocation) const;
 
     void destroyBuffer(const vk::Buffer& buffer, VmaAllocation allocation) const noexcept;
 
-    void mapData(std::size_t bufferSize, const void* data, VmaAllocation allocation) const;
+    void destroyImage(const vk::Image& image, VmaAllocation allocation) const noexcept;
+
+    void mapAndCopyData(std::size_t bufferSize, const void* data, VmaAllocation allocation) const;
 
     ~ResourceAllocator();
 

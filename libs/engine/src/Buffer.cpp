@@ -14,7 +14,7 @@ void* Buffer::getAllocation() const {
 
 Buffer::Buffer(
     const vk::Buffer& buffer, void* const allocation, std::byte* const pMappedData
-) : _buffer{ buffer }, _allocation{ allocation }, _pMappedData{ pMappedData } {
+) : _pMappedData{ pMappedData }, _buffer{ buffer }, _allocation{ allocation } {
 }
 
 void Buffer::transferBufferData(
@@ -25,11 +25,12 @@ void Buffer::transferBufferData(
 ) const {
     const auto allocator = engine.getResourceAllocator();
 
-    // Create a staging buffer to handle the transfer
+    // Create a staging buffer and fill it with the data
     auto stagingAllocation = VmaAllocation{};
     const auto stagingBuffer = allocator->allocateStagingBuffer(bufferSize, &stagingAllocation);
+    allocator->mapAndCopyData(bufferSize, data, stagingAllocation);
 
-    allocator->mapData(bufferSize, data, stagingAllocation);
+    // Copy the content from the staging buffer to the dedicated buffer
     const auto commandBuffer = beginSingleTimeTransferCommands(engine);
     commandBuffer.copyBuffer(stagingBuffer, _buffer, vk::BufferCopy{ 0, offset, bufferSize });
     endSingleTimeTransferCommands(commandBuffer, engine);

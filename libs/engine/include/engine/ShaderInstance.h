@@ -12,6 +12,9 @@
 
 class Engine;
 class UniformBuffer;
+class Texture;
+class Sampler;
+
 
 class ShaderInstance {
     friend class Shader;
@@ -20,7 +23,8 @@ public:
     ShaderInstance(const ShaderInstance&) = delete;
     ShaderInstance& operator=(const ShaderInstance&) = delete;
 
-    void setDescriptorData(uint32_t binding, const UniformBuffer* uniformBuffer, const Engine& engine) const;
+    void setDescriptor(uint32_t binding, const UniformBuffer* uniformBuffer, const Engine& engine) const;
+    void setDescriptor(uint32_t binding, const std::shared_ptr<Texture>& texture, const std::unique_ptr<Sampler>& sampler, const Engine& engine) const;
 
     [[nodiscard]] const Shader* getShader() const;
 

@@ -1,4 +1,5 @@
 #include "gui.h"
+#include "stb.h"
 
 #include <plog/Init.h>
 #include <plog/Appenders/ColorConsoleAppender.h>
@@ -11,6 +12,7 @@
 #include <engine/Drawable.h>
 #include <engine/View.h>
 #include <engine/Overlay.h>
+#include <engine/Texture.h>
 
 #include <glm/glm.hpp>
 
@@ -20,25 +22,28 @@ struct Vertex {
     glm::vec4 color;
 };
 
-static constexpr auto vertices = std::array{
-    Vertex{ {  0.0f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-    Vertex{ {  0.5f,  0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-    Vertex{ { -0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-};
-
 static constexpr auto positions = std::array{
-    glm::vec3{  0.0f, -0.5f, 0.0f },
+    glm::vec3{ -0.5f, -0.5f, 0.0f },
     glm::vec3{ -0.5f,  0.5f, 0.0f },
     glm::vec3{  0.5f,  0.5f, 0.0f },
+    glm::vec3{  0.5f, -0.5f, 0.0f },
 };
 
 static constexpr auto colors = std::array{
     glm::vec4{ 1.0f, 0.0f, 0.0f, 1.0f },
     glm::vec4{ 0.0f, 1.0f, 0.0f, 1.0f },
     glm::vec4{ 0.0f, 0.0f, 1.0f, 1.0f },
+    glm::vec4{ 1.0f, 1.0f, 1.0f, 1.0f },
 };
 
-static constexpr auto indices = std::array<uint16_t, 3>{ 0, 1, 2 };
+static constexpr auto texCoords = std::array{
+    glm::vec2{ 0.0f, 0.0f },
+    glm::vec2{ 0.0f, 1.0f },
+    glm::vec2{ 1.0f, 1.0f },
+    glm::vec2{ 1.0f, 0.0f },
+};
+
+static constexpr auto indices = std::array<uint16_t, 6>{ 0, 1, 2, 0, 2, 3 };
 
 int main(int argc, char* argv[]) {
     // Plant a console logger
@@ -50,21 +55,27 @@ int main(int argc, char* argv[]) {
         const auto context = Context::create("pan");
 
         // Create an engine
-        const auto engine = Engine::create(context->getSurface());
+        const auto engine = Engine::create(context->getSurface(), {
+            .samplerAnisotropy = true,
+        });
 
         // Create a swap chain and a renderer
         const auto swapChain = engine->createSwapChain();
         const auto renderer = engine->createRenderer();
 
-        const auto vertexBuffer = VertexBuffer::Builder(2)
-            .vertexCount(vertices.size())
+        const auto vertexBuffer = VertexBuffer::Builder()
+            .vertexCount(positions.size())
+            .bindingCount(3)
             .binding(0, sizeof(glm::vec3))
             .binding(1, sizeof(glm::vec4))
+            .binding(2, sizeof(glm::vec2))
             .attribute(0, 0, AttributeFormat::Float3)
             .attribute(1, 1, AttributeFormat::Float4)
+            .attribute(2, 2, AttributeFormat::Float2)
             .build(*engine);
-        vertexBuffer->setBindingData(0, positions.data(), *engine);
-        vertexBuffer->setBindingData(1, colors.data(), *engine);
+        vertexBuffer->setData(0, positions.data(), *engine);
+        vertexBuffer->setData(1, colors.data(), *engine);
+        vertexBuffer->setData(2, texCoords.data(), *engine);
 
         const auto indexBuffer = IndexBuffer::Builder()
             .indexCount(indices.size())
@@ -72,15 +83,35 @@ int main(int argc, char* argv[]) {
             .build(*engine);
         indexBuffer->setData(indices.data(), *engine);
 
+        int texWidth, texHeight, texChannels;
+        const auto pixels = stbi_load("textures/statue.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+        const auto texture = Texture::Builder()
+            .width(texWidth)
+            .height(texHeight)
+            .format(Texture::Format::R8G8B8A8_sRGB)
+            .shaderStages({ Shader::Stage::Fragment })
+            .build(*engine);
+        texture->setData(pixels, *engine);
+        stbi_image_free(pixels);
+
+        const auto sampler = Sampler::Builder()
+            .anisotropyEnabled(true)
+            .maxAnisotropy(16.0f)
+            .build(*engine);
+
         const auto shader = GraphicShader::Builder()
             .vertexShader("shaders/shader.vert")
             .fragmentShader("shaders/shader.frag")
+            .descriptorCount(1)
+            .descriptor(0, DescriptorType::CombinedImageSampler, 1, Shader::Stage::Fragment)
             .build(*engine, *swapChain);
 
         const auto shaderInstance = shader->createInstance(*engine);
+        shaderInstance->setDescriptor(0, texture, sampler, *engine);
 
         const auto triangle = Drawable::Builder(1)
-            .geometry(0, Drawable::Topology::TriangleList, vertexBuffer, indexBuffer, 3)
+            .geometry(0, Drawable::Topology::TriangleList, vertexBuffer, indexBuffer, indices.size())
             .material(0, shaderInstance)
             .build(*engine);
 
@@ -124,6 +155,8 @@ int main(int argc, char* argv[]) {
         // Destroy all rendering resources
         engine->destroyShaderInstance(shaderInstance);
         engine->destroyShader(shader);
+        engine->destroyImage(texture);
+        engine->destroySampler(sampler);
         engine->destroyBuffer(indexBuffer);
         engine->destroyBuffer(vertexBuffer);
         engine->destroyRenderer(renderer);

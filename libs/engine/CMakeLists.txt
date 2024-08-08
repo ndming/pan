@@ -11,13 +11,16 @@ set(SRCS
         src/Drawable.cpp
         src/Engine.cpp
         src/GraphicShader.cpp
+        src/Image.cpp
         src/IndexBuffer.cpp
         src/Overlay.cpp
         src/Renderer.cpp
+        src/Sampler.cpp
         src/Scene.cpp
         src/Shader.cpp
         src/ShaderInstance.cpp
         src/SwapChain.cpp
+        src/Texture.cpp
         src/Transformable.cpp
         src/UniformBuffer.cpp
         src/VertexBuffer.cpp

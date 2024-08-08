@@ -10,26 +10,19 @@
 #include <stdexcept>
 
 
-VertexBuffer::Builder::Builder(const int bindingCount) : _bindingCount{ bindingCount }  {
-    if (bindingCount <= 0) {
-        PLOGE << "Received non-positive binding count: " << bindingCount;
-        throw std::invalid_argument("Binding count is non-positive");
-    }
-    _bindings.resize(bindingCount);
-}
-
-VertexBuffer::Builder & VertexBuffer::Builder::vertexCount(const int count) {
-    if (count <= 0) {
-        PLOGE << "Received non-positive vertex count: " << count;
-        throw std::invalid_argument("Vertex count is non-positive");
-    }
+VertexBuffer::Builder& VertexBuffer::Builder::vertexCount(const uint32_t count) {
     _vertexCount = count;
     return *this;
 }
 
+VertexBuffer::Builder& VertexBuffer::Builder::bindingCount(const uint32_t count) {
+    _bindings.resize(count);
+    return *this;
+}
+
 VertexBuffer::Builder& VertexBuffer::Builder::binding(const uint32_t binding, const uint32_t byteStride) {
-    if (binding >= _bindingCount) {
-        PLOGE << std::format("Binding index must be in the range 0 to {}, received: {}", _bindingCount - 1, binding);
+    if (const auto bindingCount = _bindings.size(); binding >= bindingCount) {
+        PLOGE << std::format("Binding index must be in the range 0 to {}, received: {}", bindingCount - 1, binding);
         throw std::invalid_argument("Received invalid binding index");
     }
     // We're not supporting instanced rendering at this moment
@@ -65,17 +58,17 @@ vk::Format VertexBuffer::Builder::getFormat(const AttributeFormat format) {
     using enum AttributeFormat;
     switch (format) {
         case Float:  return vk::Format::eR32Sfloat;
-        case Float2:   return vk::Format::eR32G32Sfloat;
-        case Float3:   return vk::Format::eR32G32B32Sfloat;
-        case Float4:   return vk::Format::eR32G32B32A32Sfloat;
+        case Float2: return vk::Format::eR32G32Sfloat;
+        case Float3: return vk::Format::eR32G32B32Sfloat;
+        case Float4: return vk::Format::eR32G32B32A32Sfloat;
         case Uint:   return vk::Format::eR32Uint;
         case Uint2:  return vk::Format::eR32G32Uint;
         case Uint3:  return vk::Format::eR32G32B32Uint;
         case Uint4:  return vk::Format::eR32G32B32A32Uint;
         case Int:    return vk::Format::eR32Sint;
-        case Int2:  return vk::Format::eR32G32Sint;
-        case Int3:  return vk::Format::eR32G32B32Sint;
-        case Int4:  return vk::Format::eR32G32B32A32Sint;
+        case Int2:   return vk::Format::eR32G32Sint;
+        case Int3:   return vk::Format::eR32G32B32Sint;
+        case Int4:   return vk::Format::eR32G32B32A32Sint;
         case Double: return vk::Format::eR64Sfloat;
         default:     return vk::Format::eUndefined;
     }
@@ -83,9 +76,10 @@ vk::Format VertexBuffer::Builder::getFormat(const AttributeFormat format) {
 
 VertexBuffer* VertexBuffer::Builder::build(const Engine& engine) {
     // Calculate the offsets for each binding
-    auto offsets = std::vector<vk::DeviceSize>(_bindingCount);
+    const auto bindingCount = _bindings.size();
+    auto offsets = std::vector<vk::DeviceSize>(bindingCount);
     offsets[0] = vk::DeviceSize{ 0 };
-    for (int i = 0; i < _bindingCount - 1; ++i) {
+    for (int i = 0; i < bindingCount - 1; ++i) {
         offsets[i + 1] = vk::DeviceSize{ offsets[i] + _vertexCount * _bindings[i].stride };
     }
 
@@ -108,7 +102,7 @@ VertexBuffer::VertexBuffer(
     std::vector<VkVertexInputBindingDescription2EXT>&& bindings,
     std::vector<VkVertexInputAttributeDescription2EXT>&& attributes,
     std::vector<vk::DeviceSize>&& offsets,
-    const int vertexCount,
+    const uint32_t vertexCount,
     const vk::Buffer& buffer,
     void* const allocation
 ) : Buffer{ buffer, allocation },
@@ -118,7 +112,7 @@ VertexBuffer::VertexBuffer(
     _vertexCount{ vertexCount } {
 }
 
-void VertexBuffer::setBindingData(const uint32_t binding, const void* const data, const Engine& engine) const {
+void VertexBuffer::setData(const uint32_t binding, const void* const data, const Engine& engine) const {
     transferBufferData(_vertexCount * _bindingDescriptions[binding].stride, data, _offsets[binding], engine);
 }
 

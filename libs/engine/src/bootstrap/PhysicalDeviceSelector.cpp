@@ -65,10 +65,8 @@ bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice& devic
 
     device.getFeatures2(&supportedFeatures);
 
+    // Explicitly required by the Engine
     if (!basicFeatures.largePoints) {
-        return false;
-    }
-    if (feature.sampleShading && !basicFeatures.sampleRateShading) {
         return false;
     }
     if (!basicFeatures.wideLines) {
@@ -76,6 +74,14 @@ bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice& devic
     }
     if (!vertexInputDynamicStateFeatures.vertexInputDynamicState || !extendedDynamicStateFeatures.extendedDynamicState ||
         !extendedDynamicState2Features.extendedDynamicState2 || !extendedDynamicState3Features.extendedDynamicState3PolygonMode) {
+        return false;
+    }
+
+    // Optionally requested
+    if (feature.sampleShading && !basicFeatures.sampleRateShading) {
+        return false;
+    }
+    if (feature.samplerAnisotropy && !basicFeatures.samplerAnisotropy) {
         return false;
     }
 

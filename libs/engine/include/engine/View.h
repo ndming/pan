@@ -60,6 +60,9 @@ public:
     void setLineWidth(float width);
     [[nodiscard]] float getLineWidth() const;
 
+    View(const View&) = delete;
+    View& operator=(const View&) = delete;
+
 private:
     explicit View(const vk::Extent2D& swapImageExtent);
 

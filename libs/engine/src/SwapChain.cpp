@@ -171,7 +171,7 @@ void SwapChain::createImageViews(const vk::Device& device) {
         constexpr auto aspectFlags = vk::ImageAspectFlagBits::eColor;
         constexpr auto mipLevels = 1;
         const auto viewInfo = vk::ImageViewCreateInfo{
-                    {}, image, vk::ImageViewType::e2D, _imageFormat, {}, { aspectFlags, 0, mipLevels, 0, 1 } };
+            {}, image, vk::ImageViewType::e2D, _imageFormat, {}, { aspectFlags, 0, mipLevels, 0, 1 } };
         return device.createImageView(viewInfo);
     };
     const auto imageViews = _images | views::transform(toImageView);
@@ -184,8 +184,8 @@ void SwapChain::createColorResources(const vk::Device& device) {
     constexpr auto aspectFlags = vk::ImageAspectFlagBits::eColor;
 
     auto allocation = VmaAllocation{};
-    _colorImage = _allocator->allocateColorAttachmentImage(
-        _imageExtent.width, _imageExtent.height, mipLevels, _msaaSamples, _imageFormat,
+    _colorImage = _allocator->allocateDedicatedImage(
+        _imageExtent.width, _imageExtent.height, 1, mipLevels, _msaaSamples, vk::ImageType::e2D, _imageFormat,
         vk::ImageTiling::eOptimal, Usage::eTransientAttachment | Usage::eColorAttachment, &allocation);
     _colorImageAllocation = allocation;
 

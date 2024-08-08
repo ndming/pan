@@ -31,7 +31,7 @@ public:
      * @param data The new data to update this buffer, whose size conforms to the data byte size specified during
      * buffer creation.
      */
-    void setBufferData(uint32_t frameIndex, const void* data) const;
+    void setData(uint32_t frameIndex, const void* data) const;
 
     /**
      * Updates the buffer content. The transfer is guranteed to complete prior to the next draw call.
@@ -48,7 +48,7 @@ public:
      * @param data The new data to update this buffer, whose size conforms to the data byte size specified during
      * buffer creation.
      */
-    void setBufferData(const void* data) const;
+    void setData(const void* data) const;
 
     [[nodiscard]] std::size_t getBufferSize() const;
     [[nodiscard]] std::size_t getDataSize() const;

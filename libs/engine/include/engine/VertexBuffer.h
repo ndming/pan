@@ -88,15 +88,21 @@ class VertexBuffer final : public Buffer {
 public:
     class Builder {
     public:
-        explicit Builder(int bindingCount);
-
         /**
          * Specifies the number of vertices for this vertex buffer.
          *
-         * @param count The number of vertices, will be set for all bindings
+         * @param count The number of vertices, will be set for all bindings.
          * @return this Builder object for chaining calls.
          */
-        Builder& vertexCount(int count);
+        Builder& vertexCount(uint32_t count);
+
+        /**
+         * Specifies the number of bindings for this vertex buffer, must be called prior to any binding description.
+         *
+         * @param count The number of bindings.
+         * @return this Builder object for chaining calls.
+         */
+        Builder& bindingCount(uint32_t count);
 
         /**
          * Adds a binding description to this vertex buffer.
@@ -127,22 +133,21 @@ public:
     private:
         static vk::Format getFormat(AttributeFormat format);
 
-        std::vector<VkVertexInputAttributeDescription2EXT> _attributes{};
-        int _vertexCount{ 0 };
-
         std::vector<VkVertexInputBindingDescription2EXT> _bindings{};
-        int _bindingCount{ 0 };
+        std::vector<VkVertexInputAttributeDescription2EXT> _attributes{};
+
+        uint32_t _vertexCount{ 0 };
     };
 
     /**
-     * Transfer vertex data to this buffer at the binding. The operation is synchronous and the transfer is guaranteed
+     * Transfers vertex data to this buffer at the binding. The operation is synchronous and the transfer is guaranteed
      * to complete when the function returns.
      *
      * @param binding The binding to set buffer data.
      * @param data The data should respect the binding size specified when constructing this vertex buffer.
      * @param engine The Engine where the transfer and allocation will take place.
      */
-    void setBindingData(uint32_t binding, const void* data, const Engine& engine) const;
+    void setData(uint32_t binding, const void* data, const Engine& engine) const;
 
     [[nodiscard]] const std::vector<VkVertexInputBindingDescription2EXT>& getBindingDescriptions() const;
     [[nodiscard]] const std::vector<VkVertexInputAttributeDescription2EXT>& getAttributeDescriptions() const;
@@ -156,7 +161,7 @@ private:
        std::vector<VkVertexInputBindingDescription2EXT>&& bindings,
        std::vector<VkVertexInputAttributeDescription2EXT>&& attributes,
        std::vector<vk::DeviceSize>&& offsets,
-       int vertexCount,
+       uint32_t vertexCount,
        const vk::Buffer& buffer,
        void* allocation);
 
@@ -164,5 +169,5 @@ private:
     std::vector<VkVertexInputAttributeDescription2EXT> _attributeDescriptions;
     std::vector<vk::DeviceSize> _offsets;
 
-    int _vertexCount;
+    uint32_t _vertexCount;
 };

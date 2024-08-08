@@ -16,6 +16,10 @@ public:
 
     void forEach(const std::function<void(const std::shared_ptr<Composable>&)>& f) const;
 
+    Scene() = default;
+    Scene(const Scene&) = delete;
+    Scene& operator=(const Scene&) = delete;
+
 private:
     std::unordered_set<std::shared_ptr<Composable>> _composables{};
 };

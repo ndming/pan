@@ -61,7 +61,7 @@ public:
         uint32_t frameIndex,
         const vk::CommandBuffer &commandBuffer,
         const glm::mat4& cameraMatrix,
-        const glm::mat4 &currentTransform) const override;
+        const glm::mat4& currentTransform) const override;
 
     Drawable(
         std::vector<Primitive>&& primitives,
