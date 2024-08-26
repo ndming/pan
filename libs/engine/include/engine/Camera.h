@@ -12,7 +12,7 @@ public:
     void setLookAt(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up);
     void setLookAt(const glm::mat4& view);
 
-    void setProjection(float left, float right, float bottom, float top, float near, float far);
+    void setProjection(float left, float right, float top, float bottom, float near, float far);
     void setProjection(float fov, float aspect, float near, float far);
     void setProjection(const glm::mat4& proj);
 

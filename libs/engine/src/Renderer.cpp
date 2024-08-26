@@ -42,7 +42,7 @@ void Renderer::render(
 ) {
     // Try acquire an image from the swap chain
     uint32_t imageIndex;
-    if (!begineFrame(swapChain, onFrameBegin, &imageIndex)) return;
+    if (!beginFrame(swapChain, onFrameBegin, &imageIndex)) return;
 
     // We can start record drawing commands to the buffer
     _drawingCommandBuffers[_currentFrame].reset();
@@ -74,15 +74,15 @@ void Renderer::render(
     const std::shared_ptr<SwapChain>& swapChain,
     const std::function<void(uint32_t)>& onFrameBegin
 ) {
-    // Try acquire an image from the swap chain
+    // Try to acquire an image from the swap chain
     uint32_t imageIndex;
-    if (!begineFrame(swapChain, onFrameBegin, &imageIndex)) return;
+    if (!beginFrame(swapChain, onFrameBegin, &imageIndex)) return;
 
     // We can now start record drawing commands to the buffer
     _drawingCommandBuffers[_currentFrame].reset();
     _drawingCommandBuffers[_currentFrame].begin(vk::CommandBufferBeginInfo{});
 
-    // Begine the render pass
+    // Begin the render pass
     const auto renderPassInfo = vk::RenderPassBeginInfo{
         swapChain->getNativeRenderPass(), swapChain->getNativeFramebufferAt(imageIndex),
         { { 0, 0 }, swapChain->getNativeSwapImageExtent() }, CLEAR_VALUES };
@@ -103,7 +103,7 @@ void Renderer::render(
     _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-bool Renderer::begineFrame(
+bool Renderer::beginFrame(
     const std::shared_ptr<SwapChain>& swapChain,
     const std::function<void(uint32_t)>& onFrameBegin,
     uint32_t* imageIndex

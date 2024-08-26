@@ -19,6 +19,7 @@ set(SRCS
         src/Scene.cpp
         src/Shader.cpp
         src/ShaderInstance.cpp
+        src/StorageBuffer.cpp
         src/SwapChain.cpp
         src/Texture.cpp
         src/Transformable.cpp

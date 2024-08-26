@@ -18,7 +18,7 @@ SwapChain::SwapChain(
     const EngineFeature& feature,
     const std::vector<const char*>& extensions
 ) : _window{ window } {
-    // Since Vulkan is a platform agnostic API, it can not interface directly with the window system on its own.
+    // Since Vulkan is a platform-agnostic API, it cannot interface directly with the window system on its own.
     // To establish the connection between Vulkan and the window system to present results to the screen, we need
     // to use the WSI (Window System Integration) extensions.
     if (glfwCreateWindowSurface(instance, window, nullptr, reinterpret_cast<VkSurfaceKHR*>(&_surface)) != VK_SUCCESS) {
@@ -31,7 +31,7 @@ SwapChain::SwapChain(
         .extensions(extensions)
         .select(instance.enumeratePhysicalDevices(), _surface, feature);
 
-    // Although many drivers and platforms trigger VK_ERROR_OUT_OF_DATE_KHR automatically after a window resize,
+    // Although many drivers and platforms trigger VK_ERROR_OUT_OF_DATE_KHR automatically after a window resizes,
     // it is not guaranteed to happen. That’s why we’ll add some extra code to also handle resizes explicitly
     glfwSetWindowUserPointer(_window, this);
     glfwSetFramebufferSizeCallback(_window, framebufferResizeCallback);
@@ -255,20 +255,25 @@ void SwapChain::createRenderPass(const vk::Device& device) {
     };
 
     // We should keep the order we specify these attachments in mind because later on we will have to specify
-    // clear values for them in the same order
+    // clear values for them in the same order. Also, the attachment reference objects reference attachments using the
+    // indices of this array
     const auto attachments = std::array{ colorAttachment, depthAttachment, colorAttachmentResolve };
 
     static constexpr auto colorAttachmentRef = vk::AttachmentReference{ 0, vk::ImageLayout::eColorAttachmentOptimal };
     static constexpr auto depthAttachmentRef = vk::AttachmentReference{ 1, vk::ImageLayout::eDepthStencilAttachmentOptimal };
     static constexpr auto colorAttachmentResolveRef = vk::AttachmentReference{ 2, vk::ImageLayout::eColorAttachmentOptimal };
 
-    constexpr auto subpass = vk::SubpassDescription{
-        {}, vk::PipelineBindPoint::eGraphics,
-        {}, {},
-        1, &colorAttachmentRef,
-        &colorAttachmentResolveRef,
-        &depthAttachmentRef,
-    };
+    // Define a subpass for our rendering
+    auto subpass = vk::SubpassDescription{};
+    subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+    // The index of the attachment in this array is directly referenced from the fragment shader with the
+    // "layout(location = <index>) out" directive
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+    // Unlike color attachments, a subpass can only use a single depth (+stencil) attachment
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+    // This is enough to let the render pass define a multisample resolve operation
+    subpass.pResolveAttachments = &colorAttachmentResolveRef;
 
     // Subpasses in a render pass automatically take care of image layout transitions. These transitions are controlled
     // by subpass dependencies, which specify memory and execution dependencies between subpasses. We have only a single
@@ -395,14 +400,14 @@ vk::SurfaceFormatKHR SwapChain::chooseSwapSurfaceFormat(const std::vector<vk::Su
     // viewing and printing purposes, like the textures we’ll use later on
     constexpr auto format = vk::Format::eB8G8R8A8Srgb;
     // VK_FORMAT_B8G8R8A8_SRGB means that we store the B, G, R and alpha channels in that order with
-    // an 8 bit unsigned integer for a total of 32 bits per pixel. Because we're using sRGB, we should also use
+    // an 8-bit unsigned integer for a total of 32 bits per pixel. Because we're using sRGB, we should also use
     // an sRGB color format, of which one of the most common ones is VK_FORMAT_B8G8R8A8_SRGB.
     constexpr auto colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
     const auto suitable = [](const auto& it){ return it.format == format && it.colorSpace == colorSpace; };
     if (const auto found = std::ranges::find_if(availableFormats, suitable); found != availableFormats.end()) {
         return *found;
     }
-    // If our checkingfails then we could start ranking the available formats based on how "good" they are, but in
+    // If our checking fails, then we could start ranking the available formats based on how "good" they are, but in
     // most cases it’s okay to just settle with the first format that is specified
     return availableFormats[0];
 }
@@ -506,8 +511,12 @@ void SwapChain::setOnFramebufferResize(std::function<void(uint32_t, uint32_t)>&&
     _customFramebufferResizeCallback = std::move(callback);
 }
 
-float SwapChain::getAspectRatio() const {
+float SwapChain::getFramebufferAspectRatio() const {
     return static_cast<float>(_imageExtent.width) /  static_cast<float>(_imageExtent.height);
+}
+
+std::pair<int, int> SwapChain::getFramebufferSize() const {
+    return { _imageExtent.width, _imageExtent.height };
 }
 
 uint32_t SwapChain::getGraphicsQueueFamily() const {

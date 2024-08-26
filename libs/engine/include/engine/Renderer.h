@@ -37,7 +37,7 @@ private:
     void renderView(const std::unique_ptr<View>& view) const;
     void renderOverlay(const std::shared_ptr<Overlay>& overlay) const;
 
-    bool begineFrame(
+    bool beginFrame(
         const std::shared_ptr<SwapChain>& swapChain,
         const std::function<void(uint32_t)>& onFrameBegin,
         uint32_t* imageIndex) const;
@@ -60,8 +60,8 @@ private:
     // Which in-flight frame we are current at (frame index)
     uint32_t _currentFrame{ 0 };
 
-    // Allow us to record dynamic polygon mode state to the command byffer. Because the vkCmdSetPolygonModeEXT
-    // is an extension function, we have to manually load it ourself
+    // Allow us to record dynamic polygon mode state to the command buffer. Because the vkCmdSetPolygonModeEXT
+    // is an extension function, we have to manually load it ourselves
     PFN_vkCmdSetPolygonModeEXT _vkCmdSetPolygonMode;
 
     // The clear values per render pass attachment. The order should be identical to the order we specified

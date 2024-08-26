@@ -16,22 +16,21 @@ void Camera::setLookAt(const glm::mat4& view) {
     _cameraMatrix = _proj * _view;
 }
 
-void Camera::setProjection(const float left, const float right, const float bottom, const float top, const float near, const float far) {
+void Camera::setProjection(const float left, const float right, const float top, const float bottom, const float near, const float far) {
     setProjection(glm::ortho(left, right, bottom, top, near, far));
 }
 
 void Camera::setProjection(const float fov, const float aspect, const float near, const float far) {
-    setProjection(glm::perspective(fov, aspect, near, far));
+    auto proj = glm::perspective(fov, aspect, near, far);
+    // GLM was originally designed for OpenGL, where the Y coordinate of the clip coordinates is inverted. The easiest
+    // way to compensate for that is to flip the sign on the scaling factor of the Y axis in the projection matrix. If
+    // we don’t do this, then the image will be rendered upside down.
+    proj[1][1] *= -1;
+    setProjection(proj);
 }
 
 void Camera::setProjection(const glm::mat4& proj) {
     _proj = proj;
-
-    // GLM was originally designed for OpenGL, where the Y coordinate of the clip coordinates is inverted. The easiest
-    // way to compensate for that is to flip the sign on the scaling factor of the Y axis in the projection matrix. If
-    // we don’t do this, then the image will be rendered upside down.
-    _proj[1][1] *= -1;
-
     _cameraMatrix = _proj * _view;
 }
 

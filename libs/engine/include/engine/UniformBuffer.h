@@ -34,10 +34,10 @@ public:
     void setData(uint32_t frameIndex, const void* data) const;
 
     /**
-     * Updates the buffer content. The transfer is guranteed to complete prior to the next draw call.
+     * Updates the buffer content. The transfer is guaranteed to complete prior to the next draw call.
      *
      * Note that this operation must NOT be called inside the main render loop. Uniform buffers are frame-dependent
-     * resources, thus underhood, a UniformBuffer conceptually holds more than a single native buffer object, each
+     * resources, thus under the hood, a UniformBuffer conceptually holds more than a single native buffer object, each
      * dedicated to a certain in-flight frame. Because this function updates all the internal buffers at once, the
      * content of some native buffer will change while its associated frame might be consuming it, causing artifacts.
      *
@@ -60,7 +60,7 @@ private:
     UniformBuffer(std::size_t bufferSize, std::size_t dataSize, const vk::Buffer& buffer, void* allocation, std::byte* pMappedData);
 
     // This holds the size of the uniform buffer for each in-flight frame, not the actual native buffer size.
-    // The offset to the buffer for frame i should be calculated as i * _bufferSize.
+    // The offset to the buffer for frame ith should be calculated as i * _bufferSize.
     std::size_t _bufferSize;
 
     // This holds the data size requested for each uniform buffer in each in-flight frame, which may not be as large

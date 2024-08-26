@@ -33,7 +33,8 @@ public:
     void setOnFramebufferResize(const std::function<void(uint32_t, uint32_t)>& callback);
     void setOnFramebufferResize(std::function<void(uint32_t, uint32_t)>&& callback) noexcept;
 
-    [[nodiscard]] float getAspectRatio() const;
+    [[nodiscard]] float getFramebufferAspectRatio() const;
+    [[nodiscard]] std::pair<int, int> getFramebufferSize() const;
     [[nodiscard]] uint32_t getGraphicsQueueFamily() const;
     [[nodiscard]] uint32_t getImageCount() const;
     [[nodiscard]] uint32_t getMinImageCount() const;

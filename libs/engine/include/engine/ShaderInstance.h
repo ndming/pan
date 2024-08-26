@@ -12,6 +12,7 @@
 
 class Engine;
 class UniformBuffer;
+class StorageBuffer;
 class Texture;
 class Sampler;
 
@@ -24,6 +25,7 @@ public:
     ShaderInstance& operator=(const ShaderInstance&) = delete;
 
     void setDescriptor(uint32_t binding, const UniformBuffer* uniformBuffer, const Engine& engine) const;
+    void setDescriptor(uint32_t binding, const std::vector<StorageBuffer*>& buffers, const Engine& engine) const;
     void setDescriptor(uint32_t binding, const std::shared_ptr<Texture>& texture, const std::unique_ptr<Sampler>& sampler, const Engine& engine) const;
 
     [[nodiscard]] const Shader* getShader() const;

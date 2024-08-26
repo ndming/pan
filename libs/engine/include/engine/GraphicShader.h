@@ -3,8 +3,8 @@
 #include "engine/Shader.h"
 
 
-class Engine;
 class SwapChain;
+
 
 class GraphicShader final : public Shader {
 public:

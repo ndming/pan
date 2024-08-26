@@ -53,8 +53,10 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
     }
 
     // Descriptor set layout and pipeline layout
+    const auto bindingFlagInfo = vk::DescriptorSetLayoutBindingFlagsCreateInfo{
+        static_cast<uint32_t>(_descriptorBindingFlags.size()), _descriptorBindingFlags.data() };
     const auto descriptorSetLayout = device.createDescriptorSetLayout(
-        { {}, static_cast<uint32_t>(_descriptorBindings.size()), _descriptorBindings.data() });
+        { {}, static_cast<uint32_t>(_descriptorBindings.size()), _descriptorBindings.data(), &bindingFlagInfo });
     const auto pipelineLayout = device.createPipelineLayout(
         { {}, 1, &descriptorSetLayout, static_cast<uint32_t>(_pushConstantRanges.size()), _pushConstantRanges.data() });
 
@@ -91,7 +93,7 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
     };
 
     // These values will be able to configure at runtime
-    constexpr auto vetexInputState = vk::PipelineVertexInputStateCreateInfo{};
+    constexpr auto vertexInputState = vk::PipelineVertexInputStateCreateInfo{};
     constexpr auto viewportState = vk::PipelineViewportStateCreateInfo{ {}, 1, {}, 1, {} };
     constexpr auto inputAssembly = vk::PipelineInputAssemblyStateCreateInfo{};
 
@@ -122,7 +124,7 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
     depthStencil.depthTestEnable = vk::True;
     depthStencil.depthWriteEnable = vk::True;
     depthStencil.depthCompareOp = vk::CompareOp::eLess;
-    // Optional depth bount test
+    // Optional depth bound test
     depthStencil.depthBoundsTestEnable = vk::False;
     depthStencil.minDepthBounds = 0.0f;
     depthStencil.maxDepthBounds = 1.0f;
@@ -131,7 +133,7 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
     depthStencil.front = vk::StencilOp::eZero;
     depthStencil.back = vk::StencilOp::eZero;
 
-    // TODO: add suport for color blending
+    // TODO: add support for color blending
     auto colorBlendAttachment = vk::PipelineColorBlendAttachmentState{};
     colorBlendAttachment.blendEnable = vk::False;
     colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR |
@@ -142,13 +144,39 @@ Shader* GraphicShader::Builder::build(const Engine& engine, const SwapChain& swa
     const auto colorBlending = vk::PipelineColorBlendStateCreateInfo{
         {}, vk::False, {}, 1, &colorBlendAttachment };
 
-    // Construct the pipeline
     const auto dynamicStateInfo = vk::PipelineDynamicStateCreateInfo{
         {}, static_cast<uint32_t>(dynamicStates.size()), dynamicStates.data() };
-    const auto pipelineInfo = vk::GraphicsPipelineCreateInfo{
-        {}, static_cast<uint32_t>(shaderStages.size()), shaderStages.data(), &vetexInputState, &inputAssembly,
-        {}, &viewportState, &rasterizer, &multisampling, &depthStencil, &colorBlending, &dynamicStateInfo,
-        pipelineLayout, swapChain.getNativeRenderPass(), 0, nullptr, -1 };
+
+    // Construct the pipeline
+    auto pipelineInfo = vk::GraphicsPipelineCreateInfo{};
+    // The shaders
+    pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+    pipelineInfo.pStages = shaderStages.data();
+    // Fixed and dynamic states
+    pipelineInfo.pVertexInputState = &vertexInputState;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicStateInfo;
+    // The pipeline layout is a Vulkan handle rather than a struct pointer
+    pipelineInfo.layout = pipelineLayout;
+    // Reference to the render pass and the index of the sub pass where this graphics pipeline will be used
+    // It is also possible to use other render passes with this pipeline instead of this specific instance,
+    // but they have to be compatible with this very specific renderPass
+    pipelineInfo.renderPass = swapChain.getNativeRenderPass();
+    pipelineInfo.subpass = 0;  // right now we only have the one (and only) subpass
+    // It's possible to create a new graphics pipeline by deriving from an existing pipeline. The idea of pipeline
+    // derivatives is that it is less expensive to set up pipelines when they have much functionality in common with
+    // an existing pipeline and switching between pipelines from the same parent can also be done quicker. We can
+    // specify the handle of an existing pipeline with basePipelineHandle or reference another pipeline that is about
+    // to be created by index with basePipelineIndex. These values are only used if the eDerivative flag is also
+    // specified in the flags field.
+    pipelineInfo.basePipelineHandle = nullptr;
+    pipelineInfo.basePipelineIndex = -1;
+
     const auto pipeline = device.createGraphicsPipeline(nullptr, pipelineInfo).value;
 
     // We no longer need the shader modules once the pipeline is created

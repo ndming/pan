@@ -87,6 +87,11 @@ public:
     [[nodiscard]] uint32_t getLimitPushConstantSize() const;
     [[nodiscard]] float getLimitMaxSamplerAnisotropy() const;
     [[nodiscard]] uint32_t getLimitMinUniformBufferOffsetAlignment() const;
+    [[nodiscard]] uint32_t getLimitMinStorageBufferOffsetAlignment() const;
+    [[nodiscard]] uint32_t getLimitMaxUniformBufferRange() const;
+    [[nodiscard]] uint32_t getLimitMaxStorageBufferRange() const;
+    [[nodiscard]] uint32_t getLimitMaxPerStageDescriptorUniformBuffers() const;
+    [[nodiscard]] uint32_t getLimitMaxPerStageDescriptorStorageBuffers() const;
 
     [[nodiscard]] vk::Instance getNativeInstance() const;
     [[nodiscard]] vk::Device getNativeDevice() const;

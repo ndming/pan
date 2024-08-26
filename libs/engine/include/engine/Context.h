@@ -10,8 +10,11 @@ using Surface = GLFWwindow;
 
 class Context final {
 public:
-    static std::unique_ptr<Context> create(std::string_view name, int width = 1280, int height = 768);
+    static std::unique_ptr<Context> create(std::string_view name);
     void destroy() const noexcept;
+
+    static void setOnMouseClick(const std::function<void(double, double)>& callback);
+    static void setOnMouseClick(std::function<void(double, double)>&& callback) noexcept;
 
     [[nodiscard]] Surface* getSurface() const;
 
@@ -21,7 +24,7 @@ public:
     Context& operator=(const Context&) = delete;
 
 private:
-    Context(std::string_view name, int width, int height);
+    explicit Context(std::string_view name);
 
     GLFWwindow* _window;
 };

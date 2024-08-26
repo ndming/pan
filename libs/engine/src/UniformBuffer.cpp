@@ -10,7 +10,7 @@ UniformBuffer::Builder & UniformBuffer::Builder::dataByteSize(const std::size_t 
 }
 
 UniformBuffer* UniformBuffer::Builder::build(const Engine& engine) const {
-    // We should have multiple buffers, because multiple frames may be in flight at the same time and we don’t want to
+    // We should have multiple buffers, because multiple frames may be in flight at the same time, and we don’t want to
     // update the buffer in preparation of the next frame while a previous one is still reading from it! Thus, we need
     // to have as many uniform buffers as we have frames in flight, and write to a uniform buffer that is not currently
     // being read by the GPU. To promote cache locality, we will only create and allocate a single native VkBuffer that

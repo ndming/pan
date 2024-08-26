@@ -4,6 +4,9 @@
 #include "engine/Texture.h"
 #include "engine/Sampler.h"
 
+#include <ranges>
+#include <engine/StorageBuffer.h>
+
 
 ShaderInstance::ShaderInstance(
     const Shader* const shader,
@@ -31,6 +34,36 @@ void ShaderInstance::setDescriptor(
         const auto descriptorWrites = std::array{
             vk::WriteDescriptorSet{ _descriptorSets[i], binding, 0, 1, vk::DescriptorType::eUniformBuffer, {}, &bufferInfo },
         };
+        device.updateDescriptorSets(descriptorWrites, {});
+    }
+}
+
+void ShaderInstance::setDescriptor(
+    const uint32_t binding,
+    const std::vector<StorageBuffer*>& buffers,
+    const Engine& engine
+) const {
+    const auto device = engine.getNativeDevice();
+
+    const auto toDescriptorBufferInfo = [](const StorageBuffer* buffer) {
+        auto bufferInfo = vk::DescriptorBufferInfo{};
+        bufferInfo.buffer = buffer->getNativeBuffer();
+        bufferInfo.offset = 0;
+        bufferInfo.range = buffer->getBufferSize();
+        return bufferInfo;
+    };
+    for (uint32_t i = 0; i < Renderer::getMaxFramesInFlight(); ++i) {
+        const auto bufferInfos = buffers | std::views::transform(toDescriptorBufferInfo) | std::ranges::to<std::vector>();
+
+        auto writeDescriptor = vk::WriteDescriptorSet{};
+        writeDescriptor.dstSet = _descriptorSets[i];
+        writeDescriptor.dstBinding = binding;
+        writeDescriptor.dstArrayElement = 0;
+        writeDescriptor.descriptorCount = static_cast<uint32_t>(buffers.size());
+        writeDescriptor.descriptorType = vk::DescriptorType::eStorageBuffer;
+        writeDescriptor.pBufferInfo = bufferInfos.data();
+
+        const auto descriptorWrites = std::array{ writeDescriptor };
         device.updateDescriptorSets(descriptorWrites, {});
     }
 }

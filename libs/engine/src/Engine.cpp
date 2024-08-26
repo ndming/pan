@@ -141,6 +141,10 @@ vk::PhysicalDeviceFeatures2 Engine::getPhysicalDeviceFeatures(const EngineFeatur
     auto vertexInputDynamicStateFeatures = new vk::PhysicalDeviceVertexInputDynamicStateFeaturesEXT{};
     vertexInputDynamicStateFeatures->vertexInputDynamicState = vk::True;
 
+    // Explicitly required by the application
+    auto descriptorIndexingFeatures = new vk::PhysicalDeviceDescriptorIndexingFeatures{};
+    descriptorIndexingFeatures->descriptorBindingVariableDescriptorCount = vk::True;
+
     // Extended dynamic state features: cull mode, front face, primitive topology
     auto extendedDynamicStateFeatures = new vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT{};
     extendedDynamicStateFeatures->extendedDynamicState = vk::True;
@@ -157,7 +161,8 @@ vk::PhysicalDeviceFeatures2 Engine::getPhysicalDeviceFeatures(const EngineFeatur
     auto deviceFeatures = vk::PhysicalDeviceFeatures2{};
     deviceFeatures.features = basicFeatures;
     deviceFeatures.pNext = vertexInputDynamicStateFeatures;
-    vertexInputDynamicStateFeatures->pNext = extendedDynamicStateFeatures;
+    vertexInputDynamicStateFeatures->pNext = descriptorIndexingFeatures;
+    descriptorIndexingFeatures->pNext = extendedDynamicStateFeatures;
     extendedDynamicStateFeatures->pNext = extendedDynamicState2Features;
     extendedDynamicState2Features->pNext = extendedDynamicState3Features;
 
@@ -166,13 +171,15 @@ vk::PhysicalDeviceFeatures2 Engine::getPhysicalDeviceFeatures(const EngineFeatur
 
 void Engine::cleanupPhysicalDeviceFeatures(const vk::PhysicalDeviceFeatures2& deviceFeatures) {
     const auto vertexInputDynamicStateFeatures = static_cast<vk::PhysicalDeviceVertexInputDynamicStateFeaturesEXT*>(deviceFeatures.pNext);
-    const auto extendedDynamicStateFeatures = static_cast<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT*>(vertexInputDynamicStateFeatures->pNext);
+    const auto descriptorIndexingFeatures = static_cast<vk::PhysicalDeviceDescriptorIndexingFeatures*>(vertexInputDynamicStateFeatures->pNext);
+    const auto extendedDynamicStateFeatures = static_cast<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT*>(descriptorIndexingFeatures->pNext);
     const auto extendedDynamicState2Features = static_cast<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT*>(extendedDynamicStateFeatures->pNext);
     const auto extendedDynamicState3Features = static_cast<vk::PhysicalDeviceExtendedDynamicState3FeaturesEXT*>(extendedDynamicState2Features->pNext);
 
     delete extendedDynamicState3Features;
     delete extendedDynamicState2Features;
     delete extendedDynamicStateFeatures;
+    delete descriptorIndexingFeatures;
     delete vertexInputDynamicStateFeatures;
 }
 
@@ -270,6 +277,26 @@ float Engine::getLimitMaxSamplerAnisotropy() const {
 
 uint32_t Engine::getLimitMinUniformBufferOffsetAlignment() const {
     return _swapChain->_physicalDevice.getProperties().limits.minUniformBufferOffsetAlignment;
+}
+
+uint32_t Engine::getLimitMinStorageBufferOffsetAlignment() const {
+    return _swapChain->_physicalDevice.getProperties().limits.minStorageBufferOffsetAlignment;
+}
+
+uint32_t Engine::getLimitMaxUniformBufferRange() const {
+    return _swapChain->_physicalDevice.getProperties().limits.maxUniformBufferRange;
+}
+
+uint32_t Engine::getLimitMaxStorageBufferRange() const {
+    return _swapChain->_physicalDevice.getProperties().limits.maxStorageBufferRange;
+}
+
+uint32_t Engine::getLimitMaxPerStageDescriptorUniformBuffers() const {
+    return _swapChain->_physicalDevice.getProperties().limits.maxPerStageDescriptorUniformBuffers;
+}
+
+uint32_t Engine::getLimitMaxPerStageDescriptorStorageBuffers() const {
+    return _swapChain->_physicalDevice.getProperties().limits.maxPerStageDescriptorStorageBuffers;
 }
 
 vk::Instance Engine::getNativeInstance() const {

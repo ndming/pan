@@ -13,14 +13,6 @@ class Engine;
 class ShaderInstance;
 
 
-enum class DescriptorType {
-    UniformBuffer,
-    StorageBuffer,
-    Sampler,
-    CombinedImageSampler,
-};
-
-
 class Shader {
 public:
     enum class Stage {
@@ -38,11 +30,15 @@ public:
                 throw std::invalid_argument("Descriptor count is non-positive");
             }
             _descriptorBindings.resize(descriptorCount);
+            _descriptorBindingFlags.resize(descriptorCount);
             return *static_cast<T*>(this);
         }
 
-        T& descriptor(const uint32_t binding, const DescriptorType type, const uint32_t count, const Stage stage) {
-            _descriptorBindings[binding] = { binding, getDescriptorType(type), count, getNativeShaderStage(stage) };
+        T& descriptor(
+            const uint32_t binding, const vk::DescriptorType type, const uint32_t count,
+            const vk::ShaderStageFlags stages, const vk::DescriptorBindingFlags flags = {}) {
+            _descriptorBindings[binding] = { binding, type, count, stages };
+            _descriptorBindingFlags[binding] = flags;
             return *static_cast<T*>(this);
         }
 
@@ -82,19 +78,8 @@ public:
         }
 
         std::vector<vk::DescriptorSetLayoutBinding> _descriptorBindings{};
+        std::vector<vk::DescriptorBindingFlags> _descriptorBindingFlags{};
         std::vector<vk::PushConstantRange> _pushConstantRanges{};
-
-    private:
-        static vk::DescriptorType getDescriptorType(const DescriptorType type) {
-            using enum DescriptorType;
-            switch (type) {
-                case UniformBuffer:        return vk::DescriptorType::eUniformBuffer;
-                case StorageBuffer:        return vk::DescriptorType::eStorageBuffer;
-                case Sampler:              return vk::DescriptorType::eSampler;
-                case CombinedImageSampler: return vk::DescriptorType::eCombinedImageSampler;
-                default: throw std::invalid_argument("Unsupported descriptor type");
-            }
-        }
     };
 
     Shader(const Shader&) = delete;

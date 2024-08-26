@@ -3,18 +3,47 @@
 #include <GLFW/glfw3.h>
 
 
-std::unique_ptr<Context> Context::create(const std::string_view name, const int width, const int height) {
-    return std::unique_ptr<Context>{ new Context(name, width, height) };
+static std::function<void(double, double)> mMouseClickCallback{ [](auto, auto) {} };
+
+std::unique_ptr<Context> Context::create(const std::string_view name) {
+    return std::unique_ptr<Context>{ new Context(name) };
 }
 
-Context::Context(const std::string_view name, const int width, const int height) {
-    glfwInit(); glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);  // don't create an OpenGL context
-    _window = glfwCreateWindow(width, height, name.data(), nullptr, nullptr);
+Context::Context(const std::string_view name) {
+    glfwInit();
+
+    // Get the primary monitor and the video mode
+    const auto monitor = glfwGetPrimaryMonitor();
+    const auto mode = glfwGetVideoMode(monitor);
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);  // don't create an OpenGL context
+
+    // Create a window and maximize it
+    _window = glfwCreateWindow(mode->width, mode->height, name.data(), nullptr, nullptr);
+    glfwMaximizeWindow(_window);
+
+    glfwSetMouseButtonCallback(_window, [](const auto window, const auto button, const auto action, auto mods) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            if (action == GLFW_PRESS) {
+                double xPos, yPos;
+                glfwGetCursorPos(window, &xPos, &yPos);
+                mMouseClickCallback(xPos, yPos);
+            }
+        }
+    });
 }
 
 void Context::destroy() const noexcept {
     glfwDestroyWindow(_window);
     glfwTerminate();
+}
+
+void Context::setOnMouseClick(const std::function<void(double, double)>& callback) {
+    mMouseClickCallback = callback;
+}
+
+void Context::setOnMouseClick(std::function<void(double, double)>&& callback) noexcept {
+    mMouseClickCallback = std::move(callback);
 }
 
 Surface* Context::getSurface() const {

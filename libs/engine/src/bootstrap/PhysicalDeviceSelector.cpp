@@ -52,6 +52,7 @@ bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice& devic
     device.getFeatures(&basicFeatures);
 
     auto vertexInputDynamicStateFeatures = vk::PhysicalDeviceVertexInputDynamicStateFeaturesEXT{};
+    auto descriptorIndexingFeatures = vk::PhysicalDeviceDescriptorIndexingFeatures{};
     auto extendedDynamicStateFeatures = vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT{};
     auto extendedDynamicState2Features = vk::PhysicalDeviceExtendedDynamicState2FeaturesEXT{};
     auto extendedDynamicState3Features = vk::PhysicalDeviceExtendedDynamicState3FeaturesEXT{};
@@ -59,7 +60,8 @@ bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice& devic
     auto supportedFeatures = vk::PhysicalDeviceFeatures2{};
     supportedFeatures.features = basicFeatures;
     supportedFeatures.pNext = &vertexInputDynamicStateFeatures;
-    vertexInputDynamicStateFeatures.pNext = &extendedDynamicStateFeatures;
+    vertexInputDynamicStateFeatures.pNext = &descriptorIndexingFeatures;
+    descriptorIndexingFeatures.pNext = &extendedDynamicStateFeatures;
     extendedDynamicStateFeatures.pNext = &extendedDynamicState2Features;
     extendedDynamicState2Features.pNext = &extendedDynamicState3Features;
 
@@ -74,6 +76,11 @@ bool PhysicalDeviceSelector::checkFeatureSupport(const vk::PhysicalDevice& devic
     }
     if (!vertexInputDynamicStateFeatures.vertexInputDynamicState || !extendedDynamicStateFeatures.extendedDynamicState ||
         !extendedDynamicState2Features.extendedDynamicState2 || !extendedDynamicState3Features.extendedDynamicState3PolygonMode) {
+        return false;
+    }
+
+    // Explicitly required by the application
+    if (!descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount) {
         return false;
     }
 
