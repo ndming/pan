@@ -12,7 +12,9 @@
 
 glm::mat4 getPanProjection(const float framebufferAspectRatio) {
     static constexpr auto sideLength = QUAD_SIDE_HALF_EXTENT + QUAD_EDGE_PADDING;
-    return glm::ortho(-sideLength * framebufferAspectRatio, sideLength * framebufferAspectRatio, sideLength, -sideLength, 0.1f, 10.0f);
+    auto proj = glm::ortho(-sideLength * framebufferAspectRatio, sideLength * framebufferAspectRatio, -sideLength, sideLength, 0.1f, 10.0f);
+    proj[1][1] *= -1;
+    return proj;
 }
 
 bool getQuadCoordinates(
@@ -20,24 +22,28 @@ bool getQuadCoordinates(
     const std::pair<int, int>& framebufferSize,
     const float quadAspectRatio,
     const float offsetX,
-    float* quadX, float* quadY
+    float* quadX, float* quadY,
+    float* posX, float* posY
 ) {
     const auto frameW = static_cast<float>(framebufferSize.first);
     const auto frameH = static_cast<float>(framebufferSize.second);
 
     // Transform x, y (screen coordinates) to world space
     const auto scaleFactor = (QUAD_SIDE_HALF_EXTENT + QUAD_EDGE_PADDING) * 2.0f / frameH;
-    const auto posX = (x - frameW / 2.0f) * scaleFactor;
-    const auto posY = (y - frameH / 2.0f) * scaleFactor;
+    const auto pX = (x - frameW / 2.0f) * scaleFactor;
+    const auto pY = (y - frameH / 2.0f) * scaleFactor;
 
-    if (posX >  QUAD_SIDE_HALF_EXTENT * quadAspectRatio + offsetX ||
-        posX < -QUAD_SIDE_HALF_EXTENT * quadAspectRatio + offsetX ||
-        std::abs(posY) > QUAD_SIDE_HALF_EXTENT) {
+    if (pX >  QUAD_SIDE_HALF_EXTENT * quadAspectRatio + offsetX ||
+        pX < -QUAD_SIDE_HALF_EXTENT * quadAspectRatio + offsetX ||
+        std::abs(pY) > QUAD_SIDE_HALF_EXTENT) {
         return false;
     }
 
-    *quadX = (posX + QUAD_SIDE_HALF_EXTENT * quadAspectRatio - offsetX) / (QUAD_SIDE_HALF_EXTENT * quadAspectRatio * 2.0f);
-    *quadY = (posY + QUAD_SIDE_HALF_EXTENT) / (QUAD_SIDE_HALF_EXTENT * 2.0f);
+    *quadX = (pX + QUAD_SIDE_HALF_EXTENT * quadAspectRatio - offsetX) / (QUAD_SIDE_HALF_EXTENT * quadAspectRatio * 2.0f);
+    *quadY = (pY + QUAD_SIDE_HALF_EXTENT) / (QUAD_SIDE_HALF_EXTENT * 2.0f);
+    if (posX) *posX = pX;
+    if (posY) *posY = pY;
+
     return true;
 }
 
@@ -82,6 +88,25 @@ std::vector<double> parseMetadata(char** const metadata, const int count) {
     }
 
     return centers;
+}
+
+std::vector<float> getSpectralValues(GDALDataset* dataset, const float quadX, const float quadY) {
+    const auto imgYSize = dataset->GetRasterYSize();
+    const auto imgXSize = dataset->GetRasterXSize();
+    const auto imgX = std::min(static_cast<int>(std::round(static_cast<float>(imgXSize) * quadX)), imgXSize - 1);
+    const auto imgY = std::min(static_cast<int>(std::round(static_cast<float>(imgYSize) * quadY)), imgYSize - 1);
+
+    const auto bandCount = dataset->GetRasterCount();
+    auto values = std::vector<float>(bandCount);
+    for (int i = 1; i <= bandCount; ++i) {
+        const auto band = dataset->GetRasterBand(i);
+
+        float pixelValue = 0.0f;
+        [[maybe_unused]] const auto err = band->RasterIO(GF_Read, imgX, imgY, 1, 1, &pixelValue, 1, 1, GDT_Float32, 0, 0);
+
+        values[i - 1] = pixelValue;
+    }
+    return values;
 }
 
 struct RegionInfo {
@@ -146,18 +171,21 @@ glm::vec4 getColor(const int index) {
 }
 
 VertexBuffer* buildMarkVertexBuffer(const Engine& engine) {
-    auto positions = std::array<glm::vec3, SUBDIVISION_COUNT>{};
-    auto colors = std::array<glm::vec4, SUBDIVISION_COUNT>{};
+    auto positions = std::array<glm::vec3, SUBDIVISION_COUNT + 1>{};
+    auto colors = std::array<glm::vec4, SUBDIVISION_COUNT + 1>{};
+
+    positions[0] = glm::vec3{ 0.0f, 0.0f, 0.0f };
+    colors[0] = glm::vec4{ 1.0f, 1.0f, 1.0f, 1.0f };
 
     constexpr auto step = 2.0f * std::numbers::pi_v<float> / SUBDIVISION_COUNT;
     for (int i = 0; i < SUBDIVISION_COUNT; ++i) {
         const auto angle = i * step;
-        positions[i] = glm::vec3{ 0.08f * glm::cos(angle), 0.08f * glm::sin(angle), -0.8f };
-        colors[i] = getColor(i);
+        positions[i + 1] = glm::vec3{ 0.08f * glm::cos(-angle), 0.08f * glm::sin(-angle), -1.0f };
+        colors[i + 1] = glm::vec4{ 1.0f, 1.0f, 1.0f, 1.0f };
     }
 
     const auto buffer = VertexBuffer::Builder()
-        .vertexCount(SUBDIVISION_COUNT)
+        .vertexCount(SUBDIVISION_COUNT + 1)
         .bindingCount(2)
         .binding(0, sizeof(glm::vec3))
         .binding(1, sizeof(glm::vec4))
@@ -171,9 +199,50 @@ VertexBuffer* buildMarkVertexBuffer(const Engine& engine) {
 }
 
 IndexBuffer* buildMarkIndexBuffer(const Engine& engine) {
-    auto indices = std::array<uint16_t, SUBDIVISION_COUNT + 1>{};
-    uint16_t n = 0;
-    std::ranges::generate_n(indices.begin(), SUBDIVISION_COUNT + 1, [&n]() mutable { return n++ % SUBDIVISION_COUNT; });
+    auto indices = std::array<uint16_t, SUBDIVISION_COUNT + 2>{};
+    std::ranges::generate_n(indices.begin(), SUBDIVISION_COUNT + 2, [n{ 0 }]() mutable { return n++; });
+    indices[SUBDIVISION_COUNT + 1] = 1;
+
+    const auto buffer = IndexBuffer::Builder()
+        .indexCount(SUBDIVISION_COUNT + 2)
+        .indexType(IndexType::Uint16)
+        .build(engine);
+    buffer->setData(indices.data(), engine);
+
+    return buffer;
+}
+
+VertexBuffer* buildFrameVertexBuffer(const float imgRatio, const Engine& engine) {
+    static constexpr auto scale = 0.7f;
+    const auto positions = std::array{
+        glm::vec3{ -QUAD_SIDE_HALF_EXTENT * imgRatio * scale, -QUAD_SIDE_HALF_EXTENT * scale, 0.0f },
+        glm::vec3{ -QUAD_SIDE_HALF_EXTENT * imgRatio * scale,  QUAD_SIDE_HALF_EXTENT * scale, 0.0f },
+        glm::vec3{  QUAD_SIDE_HALF_EXTENT * imgRatio * scale, -QUAD_SIDE_HALF_EXTENT * scale, 0.0f },
+        glm::vec3{  QUAD_SIDE_HALF_EXTENT * imgRatio * scale,  QUAD_SIDE_HALF_EXTENT * scale, 0.0f },
+    };
+    static constexpr auto colors = std::array{
+        glm::vec4{ 1.0f, 0.0f, 0.0f, 1.0f },
+        glm::vec4{ 0.0f, 1.0f, 0.0f, 1.0f },
+        glm::vec4{ 0.0f, 0.0f, 1.0f, 1.0f },
+        glm::vec4{ 1.0f, 1.0f, 1.0f, 1.0f },
+    };
+
+    const auto buffer = VertexBuffer::Builder()
+        .vertexCount(4)
+        .bindingCount(2)
+        .binding(0, sizeof(glm::vec3))
+        .binding(1, sizeof(glm::vec4))
+        .attribute(0, 0, AttributeFormat::Float3)
+        .attribute(1, 1, AttributeFormat::Float4)
+        .build(engine);
+    buffer->setData(0, positions.data(), engine);
+    buffer->setData(1, colors.data(), engine);
+
+    return buffer;
+}
+
+IndexBuffer* buildFrameIndexBuffer(const Engine& engine) {
+    static constexpr auto indices = std::array<uint16_t, 6>{ 0, 1, 3, 2, 0 };
 
     const auto buffer = IndexBuffer::Builder()
         .indexCount(SUBDIVISION_COUNT + 1)

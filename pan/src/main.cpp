@@ -262,9 +262,6 @@ int main(const int argc, char* argv[]) {
         .build(*engine);
     pcaQuad->setTransform(translate(glm::mat4{ 1.0f }, { -OFFSET_X, 0.0f, 0.0f }));
 
-    const auto markVertexBuffer = buildMarkVertexBuffer(*engine);
-    const auto markIndexBuffer = buildMarkIndexBuffer(*engine);
-
     const auto drawShader = GraphicShader::Builder()
         .vertexShader("shaders/draw.vert")
         .fragmentShader("shaders/draw.frag")
@@ -272,19 +269,32 @@ int main(const int argc, char* argv[]) {
 
     const auto drawShaderInstance = drawShader->createInstance(*engine);
 
+    const auto markVertexBuffer = buildMarkVertexBuffer(*engine);
+    const auto markIndexBuffer = buildMarkIndexBuffer(*engine);
     const auto mark = Drawable::Builder(1)
-        .geometry(0, Drawable::Topology::LineStrip, markVertexBuffer, markIndexBuffer, SUBDIVISION_COUNT + 1)
+        .geometry(0, Drawable::Topology::TriangleFan, markVertexBuffer, markIndexBuffer, SUBDIVISION_COUNT + 2)
         .material(0, drawShaderInstance)
         .build(*engine);
+
+    const auto frameVertexBuffer = buildFrameVertexBuffer(imgRatio, *engine);
+    const auto frameIndexBuffer = buildFrameIndexBuffer(*engine);
+    const auto frame = Drawable::Builder(1)
+        .geometry(0, Drawable::Topology::LineStrip, frameVertexBuffer, frameIndexBuffer, 5)
+        .material(0, drawShaderInstance)
+        .build(*engine);
+
+    constexpr auto translateVector = glm::vec3{ -6.0f, 1.5f, 0.0f };
+    frame->setTransform(translate(glm::mat4{ 1.0f }, translateVector));
 
     const auto scene = Scene::create();
     scene->insert(xyzQuad);
     scene->insert(pcaQuad);
     scene->insert(mark);
+    scene->insert(frame);
 
     // Create a camera
     const auto camera = Camera::create();
-    camera->setLookAt({ 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, -1.0f, 0.0f });
+    camera->setLookAt({ 0.0f, 0.0f, -5.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, -1.0f, 0.0f });
     camera->setProjection(getPanProjection(swapChain->getFramebufferAspectRatio()));
 
     // Create a view
@@ -301,28 +311,31 @@ int main(const int argc, char* argv[]) {
     Overlay::init(context->getSurface(), *engine, *swapChain);
     const auto gui = std::make_shared<GUI>();
 
+    float quadX{ 0.5f };
+    float quadY{ 0.5f };
+    mark->setTransform(translate(glm::mat4{ 1.0f },
+        glm::vec3{ 0.7f * QUAD_SIDE_HALF_EXTENT * imgRatio * (quadX * 2.0f - 1.0f),
+            0.7f * QUAD_SIDE_HALF_EXTENT * (quadY * 2.0f - 1.0f), 0.0f } + translateVector));
+
     Context::setOnMouseClick([&](const auto x, const auto y) {
-        float quadX;
-        float quadY;
         if (getQuadCoordinates(x, y, swapChain->getFramebufferSize(), imgRatio, OFFSET_X, &quadX, &quadY)) {
             // Find image coordinates at this quad location
             const auto imgX = std::min(static_cast<int>(std::round(static_cast<float>(imgXSize) * quadX)), imgXSize - 1);
             const auto imgY = std::min(static_cast<int>(std::round(static_cast<float>(imgYSize) * quadY)), imgYSize - 1);
 
-            const auto bandCount = dataset->GetRasterCount();
-            auto values = std::vector<float>(bandCount);
-            for (int i = 1; i <= bandCount; ++i) {
-                const auto band = dataset->GetRasterBand(i);
-
-                float pixelValue = 0.0f;
-                [[maybe_unused]] const auto err = band->RasterIO(GF_Read, imgX, imgY, 1, 1, &pixelValue, 1, 1, GDT_Float32, 0, 0);
-
-                values[i - 1] = pixelValue;
-            }
-            gui->updateSpectralCurve(std::move(values));
+            gui->updateSpectralCurve(getSpectralValues(dataset, quadX, quadY));
             gui->updateCurrentImageCoordinates(imgX, imgY);
+            mark->setTransform(translate(glm::mat4{ 1.0f },
+                glm::vec3{ 0.7f * QUAD_SIDE_HALF_EXTENT * imgRatio * (quadX * 2.0f - 1.0f),
+                    0.7f * QUAD_SIDE_HALF_EXTENT * (quadY * 2.0f - 1.0f), 0.0f } + translateVector));
         }
     });
+
+    // Set the initial indicator position
+    const auto imgX = std::min(static_cast<int>(std::round(static_cast<float>(imgXSize) * 0.5f)), imgXSize - 1);
+    const auto imgY = std::min(static_cast<int>(std::round(static_cast<float>(imgYSize) * 0.5f)), imgYSize - 1);
+    gui->updateSpectralCurve(getSpectralValues(dataset, 0.5f, 0.5f));
+    gui->updateCurrentImageCoordinates(imgX, imgY);
 
     view->setLineWidth(3.0f);
 
@@ -364,6 +377,8 @@ int main(const int argc, char* argv[]) {
     engine->destroyShader(shader);
     std::ranges::for_each(vectors, [&engine](const auto it) { engine->destroyBuffer(it); });
     std::ranges::for_each(rasters, [&engine](const auto it) { engine->destroyBuffer(it); });
+    engine->destroyBuffer(frameIndexBuffer);
+    engine->destroyBuffer(frameVertexBuffer);
     engine->destroyBuffer(markIndexBuffer);
     engine->destroyBuffer(markVertexBuffer);
     engine->destroyBuffer(pca);

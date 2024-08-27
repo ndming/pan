@@ -4,6 +4,7 @@
 #include <engine/VertexBuffer.h>
 #include <engine/IndexBuffer.h>
 
+#include <gdal_priv.h>
 #include <glm/glm.hpp>
 
 #include <array>
@@ -16,7 +17,9 @@ static constexpr auto QUAD_SIDE_HALF_EXTENT = 5.0f;
 static constexpr auto QUAD_EDGE_PADDING = 0.5f;
 
 glm::mat4 getPanProjection(float framebufferAspectRatio);
-bool getQuadCoordinates(float x, float y, const std::pair<int, int>& framebufferSize, float quadAspectRatio, float offsetX, float* quadX, float* quadY);
+bool getQuadCoordinates(
+    float x, float y, const std::pair<int, int>& framebufferSize, float quadAspectRatio,
+    float offsetX, float* quadX, float* quadY, float* posX = nullptr, float* posY = nullptr);
 
 struct Illuminant {
     alignas(16) std::array<float, 512> data{};
@@ -58,7 +61,12 @@ std::ostream& operator<<(std::ostream& os, Region region);
 std::vector<std::string> readHeaderFile(const std::filesystem::path& path);
 std::vector<double> parseMetadata(char** metadata, int count);
 
+std::vector<float> getSpectralValues(GDALDataset* dataset, float quadX, float quadY);
+
 static constexpr auto SUBDIVISION_COUNT = 64;
 
 [[nodiscard]] VertexBuffer* buildMarkVertexBuffer(const Engine& engine);
 [[nodiscard]] IndexBuffer* buildMarkIndexBuffer(const Engine& engine);
+
+[[nodiscard]] VertexBuffer* buildFrameVertexBuffer(float imgRatio, const Engine& engine);
+[[nodiscard]] IndexBuffer* buildFrameIndexBuffer(const Engine& engine);
