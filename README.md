@@ -5,6 +5,8 @@ Preprocessing and experimenting with such datasets may impose an efficiency chal
 to the input parameters. `pan` offers a GPU-accelerated solution to the problem. The tool uses Vulkan as its backend for parallel computations 
 while enabling real-time visualization.
 
+![cover image](gallery/cover.png)
+
 ## Current features
 - Supports `ENVI` file format.
 - Displays spectral reflectance curve at the chosen image coordinates.
