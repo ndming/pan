@@ -31,7 +31,9 @@ set(SPIR_V_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
 set(SHADER_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/pca.frag
         ${CMAKE_CURRENT_SOURCE_DIR}/shaders/xyz.frag
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader.vert
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/draw.frag
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/quad.vert
+        ${CMAKE_CURRENT_SOURCE_DIR}/shaders/draw.vert
 )
 compile_shaders(${TARGET} ${SPIR_V_OUTPUT_DIR} "${SHADER_FILES}")
 target_link_libraries(${TARGET} PRIVATE ${TARGET}_shaders)

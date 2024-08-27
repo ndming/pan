@@ -45,5 +45,5 @@ cmake_install.cmake
 cmake_uninstall.cmake
 
 # Data file
-assets/img
-assets/img.hdr
+pan/assets/img
+pan/assets/img.hdr

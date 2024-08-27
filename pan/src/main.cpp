@@ -262,9 +262,25 @@ int main(const int argc, char* argv[]) {
         .build(*engine);
     pcaQuad->setTransform(translate(glm::mat4{ 1.0f }, { -OFFSET_X, 0.0f, 0.0f }));
 
+    const auto markVertexBuffer = buildMarkVertexBuffer(*engine);
+    const auto markIndexBuffer = buildMarkIndexBuffer(*engine);
+
+    const auto drawShader = GraphicShader::Builder()
+        .vertexShader("shaders/draw.vert")
+        .fragmentShader("shaders/draw.frag")
+        .build(*engine, *swapChain);
+
+    const auto drawShaderInstance = drawShader->createInstance(*engine);
+
+    const auto mark = Drawable::Builder(1)
+        .geometry(0, Drawable::Topology::LineStrip, markVertexBuffer, markIndexBuffer, SUBDIVISION_COUNT + 1)
+        .material(0, drawShaderInstance)
+        .build(*engine);
+
     const auto scene = Scene::create();
     scene->insert(xyzQuad);
     scene->insert(pcaQuad);
+    scene->insert(mark);
 
     // Create a camera
     const auto camera = Camera::create();
@@ -308,9 +324,28 @@ int main(const int argc, char* argv[]) {
         }
     });
 
+    view->setLineWidth(3.0f);
+
     // The render loop
     context->loop([&] {
-        renderer->render(view, gui, swapChain);
+        renderer->render(view, gui, swapChain, [&](const auto frameIndex) {
+            // Update current illuminant and sensor
+            int i = 0;
+            for (auto b = bandBegin; b < bandEnd; ++b) {
+                const auto wavelength = centerWavelengths[b];
+                illuminantObject.data[i] = getIlluminantValueAt(wavelength, gui->getCurrentIlluminant());
+                sensorObject.x[i] = getSensorXValueAt(wavelength, gui->getCurrentSensor());
+                sensorObject.y[i] = getSensorYValueAt(wavelength, gui->getCurrentSensor());
+                sensorObject.z[i] = getSensorZValueAt(wavelength, gui->getCurrentSensor());
+                i += 4;
+            }
+            illuminant->setData(frameIndex, &illuminantObject);
+            sensor->setData(frameIndex, &sensorObject);
+
+            // Update current PCA count
+            pcaObject.componentCount = gui->getCurrentComponentCount();
+            pca->setData(frameIndex, &pcaObject);
+        });
     });
 
     // When we exit the loop, drawing and presentation operations may still be going on.
@@ -321,12 +356,16 @@ int main(const int argc, char* argv[]) {
     Overlay::teardown(*engine);
 
     // Destroy all rendering resources
+    engine->destroyShaderInstance(drawShaderInstance);
     engine->destroyShaderInstance(pcaShaderInstance);
     engine->destroyShaderInstance(shaderInstance);
+    engine->destroyShader(drawShader);
     engine->destroyShader(pcaShader);
     engine->destroyShader(shader);
     std::ranges::for_each(vectors, [&engine](const auto it) { engine->destroyBuffer(it); });
     std::ranges::for_each(rasters, [&engine](const auto it) { engine->destroyBuffer(it); });
+    engine->destroyBuffer(markIndexBuffer);
+    engine->destroyBuffer(markVertexBuffer);
     engine->destroyBuffer(pca);
     engine->destroyBuffer(dimension);
     engine->destroyBuffer(sensor);

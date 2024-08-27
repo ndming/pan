@@ -1,11 +1,12 @@
 #include "pan.h"
 
-#include <plog/Log.h>
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <cstdint>
 #include <fstream>
 #include <map>
+#include <numbers>
 #include <ranges>
 
 
@@ -112,6 +113,7 @@ Region getRegion(const double wavelengthNano) {
 
 std::string to_string(const Region region) {
     switch (region) {
+        case Region::VisiblePurple:     return "Visible Purple";
         case Region::VisibleViolet:     return "Visible Violet";
         case Region::VisibleBlue:       return "Visible Blue";
         case Region::VisibleCyan:       return "Visible Cyan";
@@ -127,4 +129,57 @@ std::string to_string(const Region region) {
 
 std::ostream& operator<<(std::ostream& os, const Region region) {
     return os << to_string(region);
+}
+
+glm::vec4 getColor(const int index) {
+    switch (index / 8) {
+        case 0: return glm::vec4{ 0.7f, 0.0f, 0.0f, 1.0f };
+        case 1: return glm::vec4{ 0.7f, 0.3f, 0.0f, 1.0f };
+        case 2: return glm::vec4{ 0.8f, 0.7f, 0.0f, 1.0f };
+        case 3: return glm::vec4{ 0.0f, 0.8f, 0.4f, 1.0f };
+        case 4: return glm::vec4{ 0.0f, 0.8f, 0.8f, 1.0f };
+        case 5: return glm::vec4{ 0.0f, 0.1f, 0.5f, 1.0f };
+        case 6: return glm::vec4{ 0.3f, 0.0f, 0.5f, 1.0f };
+        case 7: return glm::vec4{ 0.5f, 0.0f, 0.5f, 1.0f };
+        default: return glm::vec4{ 1.0f, 1.0f, 1.0f, 1.0f };
+    }
+}
+
+VertexBuffer* buildMarkVertexBuffer(const Engine& engine) {
+    auto positions = std::array<glm::vec3, SUBDIVISION_COUNT>{};
+    auto colors = std::array<glm::vec4, SUBDIVISION_COUNT>{};
+
+    constexpr auto step = 2.0f * std::numbers::pi_v<float> / SUBDIVISION_COUNT;
+    for (int i = 0; i < SUBDIVISION_COUNT; ++i) {
+        const auto angle = i * step;
+        positions[i] = glm::vec3{ 0.08f * glm::cos(angle), 0.08f * glm::sin(angle), -0.8f };
+        colors[i] = getColor(i);
+    }
+
+    const auto buffer = VertexBuffer::Builder()
+        .vertexCount(SUBDIVISION_COUNT)
+        .bindingCount(2)
+        .binding(0, sizeof(glm::vec3))
+        .binding(1, sizeof(glm::vec4))
+        .attribute(0, 0, AttributeFormat::Float3)
+        .attribute(1, 1, AttributeFormat::Float4)
+        .build(engine);
+    buffer->setData(0, positions.data(), engine);
+    buffer->setData(1, colors.data(), engine);
+
+    return buffer;
+}
+
+IndexBuffer* buildMarkIndexBuffer(const Engine& engine) {
+    auto indices = std::array<uint16_t, SUBDIVISION_COUNT + 1>{};
+    uint16_t n = 0;
+    std::ranges::generate_n(indices.begin(), SUBDIVISION_COUNT + 1, [&n]() mutable { return n++ % SUBDIVISION_COUNT; });
+
+    const auto buffer = IndexBuffer::Builder()
+        .indexCount(SUBDIVISION_COUNT + 1)
+        .indexType(IndexType::Uint16)
+        .build(engine);
+    buffer->setData(indices.data(), engine);
+
+    return buffer;
 }

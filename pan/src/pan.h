@@ -1,10 +1,13 @@
 #pragma once
 
+#include <engine/Engine.h>
+#include <engine/VertexBuffer.h>
+#include <engine/IndexBuffer.h>
+
 #include <glm/glm.hpp>
 
 #include <array>
 #include <filesystem>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -36,6 +39,7 @@ struct Raster {
 };
 
 enum class Region {
+    VisiblePurple,
     VisibleViolet,
     VisibleBlue,
     VisibleCyan,
@@ -53,3 +57,8 @@ std::ostream& operator<<(std::ostream& os, Region region);
 // ENVI files
 std::vector<std::string> readHeaderFile(const std::filesystem::path& path);
 std::vector<double> parseMetadata(char** metadata, int count);
+
+static constexpr auto SUBDIVISION_COUNT = 64;
+
+[[nodiscard]] VertexBuffer* buildMarkVertexBuffer(const Engine& engine);
+[[nodiscard]] IndexBuffer* buildMarkIndexBuffer(const Engine& engine);

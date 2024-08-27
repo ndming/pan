@@ -54,12 +54,26 @@ vec3 XYZToLinearRGB(vec3 xyz) {
     return clamp(rgb, 0.0, 1.0);
 }
 
+vec3 gammaCorrectLinearRGB(vec3 rgb) {
+    vec3 sRGB;
+    float gamma = 1.0 / 2.4;
+    sRGB.r = (rgb.r > 0.00304) ? (1.055 * pow(rgb.r, gamma) - 0.055) : (12.92 * rgb.r);
+    sRGB.g = (rgb.g > 0.00304) ? (1.055 * pow(rgb.g, gamma) - 0.055) : (12.92 * rgb.g);
+    sRGB.b = (rgb.b > 0.00304) ? (1.055 * pow(rgb.b, gamma) - 0.055) : (12.92 * rgb.b);
+    return sRGB;
+}
+
+vec3 adjustContrast(vec3 sRGB, float contrast) {
+    return 0.5 + contrast * (sRGB - 0.5);
+}
+
 void main() {
     int pixelX = int(fragTexCoord.x * float(dimension.rasterX - 1));
     int pixelY = int(fragTexCoord.y * float(dimension.rasterY - 1));
 
     vec3 xyz = computeTristimulus(pixelX, pixelY);
     vec3 rgb = XYZToLinearRGB(xyz);
+    vec3 sRGB = gammaCorrectLinearRGB(rgb);
 
-    outColor = vec4(rgb, 1.0);
+    outColor = vec4(adjustContrast(sRGB, 1.7), 1.0);
 }
