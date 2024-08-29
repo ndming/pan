@@ -53,7 +53,7 @@ sudo apt install libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev pkg-co
 - The project can then be configured and built with `CMake`:
 ```
 cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release --target ALL_BUILD
+cmake --build build
 ```
 
 ## Usage
